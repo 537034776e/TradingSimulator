@@ -1,0 +1,6 @@
+{
+  "name": "Simulatore Crypto",
+  "description": "Un'applicazione Android nativa in Kotlin e Jetpack Compose per la simulazione del trading in tempo reale di criptovalute.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
