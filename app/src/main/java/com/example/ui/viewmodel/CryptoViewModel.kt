@@ -7,6 +7,7 @@ import com.example.data.local.CryptoDatabase
 import com.example.data.local.CryptoHoldingEntity
 import com.example.data.local.TransactionEntity
 import com.example.data.model.CryptoCoin
+import com.example.data.model.CurrencySetting
 import com.example.data.remote.CoinLoreApiService
 import com.example.data.repository.CryptoRepository
 import com.example.data.repository.Resource
@@ -42,6 +43,14 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
         }
+    }
+
+    // --- Currency State ---
+    private val _selectedCurrency = MutableStateFlow(CurrencySetting.USD)
+    val selectedCurrency: StateFlow<CurrencySetting> = _selectedCurrency.asStateFlow()
+
+    fun setSelectedCurrency(currency: CurrencySetting) {
+        _selectedCurrency.value = currency
     }
 
     // --- Market State ---
@@ -182,10 +191,11 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
         val price = coin.priceUsd
         val totalCost = quantity * price
 
+        val currency = _selectedCurrency.value
         if (isBuy) {
             // Check sufficient funds
             if (totalCost > currentCash) {
-                onResult(TradeResult.Error("Fondi insufficienti. Costo: $${String.format("%.2f", totalCost)}, Saldo: $${String.format("%.2f", currentCash)}"))
+                onResult(TradeResult.Error("Fondi insufficienti. Costo: ${currency.format(totalCost)}, Saldo: ${currency.format(currentCash)}"))
                 return
             }
 
@@ -200,7 +210,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = price,
                         newCashBalance = newCash
                     )
-                    onResult(TradeResult.Success("Acquisto completato: $quantity ${coin.symbol} per $${String.format("%.2f", totalCost)}"))
+                    onResult(TradeResult.Success("Acquisto completato: $quantity ${coin.symbol} per ${currency.format(totalCost)}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante l'acquisto: ${e.localizedMessage}"))
                 }
@@ -226,7 +236,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = price,
                         newCashBalance = newCash
                     )
-                    onResult(TradeResult.Success("Vendita completata: $quantity ${coin.symbol} per $${String.format("%.2f", totalCost)}"))
+                    onResult(TradeResult.Success("Vendita completata: $quantity ${coin.symbol} per ${currency.format(totalCost)}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante la vendita: ${e.localizedMessage}"))
                 }

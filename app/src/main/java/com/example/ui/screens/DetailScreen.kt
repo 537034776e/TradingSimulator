@@ -66,6 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.data.model.CryptoCoin
+import com.example.data.model.CurrencySetting
 import com.example.ui.theme.GreenCrypto
 import com.example.ui.theme.RedCrypto
 import com.example.ui.viewmodel.CryptoViewModel
@@ -81,6 +82,7 @@ fun DetailScreen(
     val context = LocalContext.current
     val coinState by viewModel.selectedCoin.collectAsState()
     val portfolioState by viewModel.portfolioUiState.collectAsState()
+    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
     var quantityInput by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
@@ -109,7 +111,7 @@ fun DetailScreen(
                                     type = "text/plain"
                                     putExtra(
                                         Intent.EXTRA_TEXT,
-                                        "La criptovaluta ${coin.name} (${coin.symbol}) viene valutata a $${String.format("%.2f", coin.priceUsd)} (Variazione 24h: ${if (coin.percentChange24h >= 0) "+" else ""}${String.format("%.2f", coin.percentChange24h)}%). Negozia in sicurezza con l'app Simulatore Crypto!"
+                                        "La criptovaluta ${coin.name} (${coin.symbol}) viene valutata a ${selectedCurrency.format(coin.priceUsd)} (Variazione 24h: ${if (coin.percentChange24h >= 0) "+" else ""}${String.format("%.2f", coin.percentChange24h)}%). Negozia in sicurezza con l'app Simulatore Crypto!"
                                     )
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "Condividi questa quotazione"))
@@ -151,7 +153,7 @@ fun DetailScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Asset Logo and Price Card
-                AssetHeaderSection(coin = coin)
+                AssetHeaderSection(coin = coin, currencySetting = selectedCurrency)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -161,7 +163,7 @@ fun DetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Self Holdings status card
-                HoldingsSection(coin = coin)
+                HoldingsSection(coin = coin, currencySetting = selectedCurrency)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -230,7 +232,8 @@ fun DetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "$${String.format("%.2f", portfolioState.cashBalance)}",
+                                text = selectedCurrency.format(portfolioState.cashBalance),
+                                modifier = Modifier.testTag("cash_balance_val"),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -252,7 +255,7 @@ fun DetailScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "$${String.format("%.2f", qty * coin.priceUsd)}",
+                                    text = selectedCurrency.format(qty * coin.priceUsd),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -328,7 +331,7 @@ fun DetailScreen(
 }
 
 @Composable
-fun AssetHeaderSection(coin: CryptoCoin) {
+fun AssetHeaderSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -376,9 +379,9 @@ fun AssetHeaderSection(coin: CryptoCoin) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Column(horizontalAlignment = Alignment.End) {
+            Column(modifier = Modifier, horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "$${String.format("%.2f", coin.priceUsd)}",
+                    text = currencySetting.format(coin.priceUsd),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -489,7 +492,7 @@ fun PriceChartSection(coin: CryptoCoin) {
 }
 
 @Composable
-fun HoldingsSection(coin: CryptoCoin) {
+fun HoldingsSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
     val owned = coin.quantityOwned > 0
 
     Card(
@@ -539,7 +542,7 @@ fun HoldingsSection(coin: CryptoCoin) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "$${String.format("%.2f", coin.totalValue)}",
+                            text = currencySetting.format(coin.totalValue),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -560,7 +563,7 @@ fun HoldingsSection(coin: CryptoCoin) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "$${String.format("%.4f", coin.averagePurchasePrice)}",
+                            text = currencySetting.format(coin.averagePurchasePrice),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -575,7 +578,7 @@ fun HoldingsSection(coin: CryptoCoin) {
                         val profitColor = if (profit >= 0) GreenCrypto else RedCrypto
                         val sign = if (profit >= 0) "+" else ""
                         Text(
-                            text = "$sign$${String.format("%.2f", profit)} ($sign${String.format("%.2f", coin.profitLossPercent)}%)",
+                            text = if (profit >= 0) "+${currencySetting.format(profit)} ($sign${String.format("%.2f", coin.profitLossPercent)}%)" else "${currencySetting.format(profit)} ($sign${String.format("%.2f", coin.profitLossPercent)}%)",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = profitColor

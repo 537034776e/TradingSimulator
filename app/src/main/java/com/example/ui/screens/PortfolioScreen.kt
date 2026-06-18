@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.data.local.CryptoHoldingEntity
 import com.example.data.local.TransactionEntity
+import com.example.data.model.CurrencySetting
 import com.example.ui.theme.GreenCrypto
 import com.example.ui.theme.RedCrypto
 import com.example.ui.viewmodel.CryptoViewModel
@@ -62,6 +63,7 @@ fun PortfolioScreen(
     val context = LocalContext.current
     val portfolioState by viewModel.portfolioUiState.collectAsState()
     val marketState by viewModel.marketUiState.collectAsState()
+    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("I Miei Asset", "Cronologia")
@@ -102,7 +104,7 @@ fun PortfolioScreen(
                                 type = "text/plain"
                                 putExtra(
                                     Intent.EXTRA_TEXT,
-                                    "Sto simulando il trading di criptovalute su Simulatore Crypto! Il valore totale del mio portafoglio è di $${String.format("%.2f", portfolioState.totalPortfolioValue)} d'attivo. Inizia anche tu!"
+                                    "Sto simulando il trading di criptovalute su Simulatore Crypto! Il valore totale del mio portafoglio è di ${selectedCurrency.format(portfolioState.totalPortfolioValue)} d'attivo. Inizia anche tu!"
                                 )
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Condividi il tuo portafoglio"))
@@ -120,7 +122,7 @@ fun PortfolioScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "$${String.format("%.2f", portfolioState.totalPortfolioValue)}",
+                    text = selectedCurrency.format(portfolioState.totalPortfolioValue),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -134,12 +136,12 @@ fun PortfolioScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Fondi Contanti (USD)",
+                            text = "Fondi Contanti (${selectedCurrency.code})",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                         Text(
-                            text = "$${String.format("%.2f", portfolioState.cashBalance)}",
+                            text = selectedCurrency.format(portfolioState.cashBalance),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -154,7 +156,7 @@ fun PortfolioScreen(
                         )
                         val cryptoVal = portfolioState.totalPortfolioValue - portfolioState.cashBalance
                         Text(
-                            text = "$${String.format("%.2f", cryptoVal)}",
+                            text = selectedCurrency.format(cryptoVal),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary
@@ -192,9 +194,13 @@ fun PortfolioScreen(
             0 -> MyAssetsTab(
                 holdings = portfolioState.holdings,
                 marketCoins = marketState.coins,
+                currencySetting = selectedCurrency,
                 onNavigateToCoin = onNavigateToCoin
             )
-            1 -> TransactionsTab(transactions = portfolioState.transactions)
+            1 -> TransactionsTab(
+                transactions = portfolioState.transactions,
+                currencySetting = selectedCurrency
+            )
         }
     }
 }
@@ -203,6 +209,7 @@ fun PortfolioScreen(
 fun MyAssetsTab(
     holdings: List<CryptoHoldingEntity>,
     marketCoins: List<com.example.data.model.CryptoCoin>,
+    currencySetting: CurrencySetting,
     onNavigateToCoin: (String) -> Unit
 ) {
     if (holdings.isEmpty()) {
@@ -278,7 +285,7 @@ fun MyAssetsTab(
 
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = "$${String.format("%.2f", totalValue)}",
+                                    text = currencySetting.format(totalValue),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -300,13 +307,13 @@ fun MyAssetsTab(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Prezzo d'acquisto medio: $${String.format("%.2f", holding.averagePurchasePrice)}",
+                                text = "Prezzo d'acquisto medio: ${currencySetting.format(holding.averagePurchasePrice)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Text(
-                                text = "Prezzo Attuale: $${String.format("%.2f", currentPrice)}",
+                                text = "Prezzo Attuale: ${currencySetting.format(currentPrice)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
@@ -320,7 +327,10 @@ fun MyAssetsTab(
 }
 
 @Composable
-fun TransactionsTab(transactions: List<TransactionEntity>) {
+fun TransactionsTab(
+    transactions: List<TransactionEntity>,
+    currencySetting: CurrencySetting
+) {
     if (transactions.isEmpty()) {
         Column(
             modifier = Modifier
@@ -409,12 +419,12 @@ fun TransactionsTab(transactions: List<TransactionEntity>) {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Prezzo: $${String.format("%.2f", tx.pricePerUnit)}",
+                                text = "Prezzo: ${currencySetting.format(tx.pricePerUnit)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Valore: $${String.format("%.2f", tx.totalValue)}",
+                                text = "Valore: ${currencySetting.format(tx.totalValue)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold

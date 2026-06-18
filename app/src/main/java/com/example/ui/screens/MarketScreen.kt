@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.ArrowDropDown
+import com.example.data.model.CurrencySetting
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,16 +76,27 @@ fun MarketScreen(
 ) {
     val searchVal by viewModel.searchQuery.collectAsState()
     val marketState by viewModel.marketUiState.collectAsState()
+    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Mercato Cripto",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Mercato Cripto",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        CurrencyDropdown(
+                            selectedCurrency = selectedCurrency,
+                            onCurrencySelected = { viewModel.setSelectedCurrency(it) }
+                        )
+                    }
                 },
                 actions = {
                     IconButton(
@@ -191,6 +210,7 @@ fun MarketScreen(
                         items(marketState.coins, key = { it.id }) { coin ->
                             CoinRowItem(
                                 coin = coin,
+                                currencySetting = selectedCurrency,
                                 onClick = {
                                     viewModel.selectCoinById(coin.id)
                                     onNavigateToDetail(coin.id)
@@ -207,6 +227,7 @@ fun MarketScreen(
 @Composable
 fun CoinRowItem(
     coin: CryptoCoin,
+    currencySetting: CurrencySetting,
     onClick: () -> Unit
 ) {
     Card(
@@ -272,7 +293,7 @@ fun CoinRowItem(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = "$${String.format("%.2f", coin.priceUsd)}",
+                    text = currencySetting.format(coin.priceUsd),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -393,5 +414,79 @@ fun EmptyStateView(query: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+fun CurrencyDropdown(
+    selectedCurrency: CurrencySetting,
+    onCurrencySelected: (CurrencySetting) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Card(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.testTag("currency_dropdown_trigger")
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = if (selectedCurrency.isSymbolSuffix) selectedCurrency.code else "${selectedCurrency.symbol} ${selectedCurrency.code}",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Cambia valuta",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            CurrencySetting.entries.forEach { currency ->
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = currency.symbol,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (currency == selectedCurrency) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = currency.code,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (currency == selectedCurrency) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    onClick = {
+                        onCurrencySelected(currency)
+                        expanded = false
+                    },
+                    modifier = Modifier.testTag("currency_item_${currency.code}")
+                )
+            }
+        }
     }
 }
