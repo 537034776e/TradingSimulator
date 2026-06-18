@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -27,6 +28,20 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
         val database = CryptoDatabase.getDatabase(application)
         val apiService = CoinLoreApiService.create()
         repository = CryptoRepository(database.cryptoDao(), apiService)
+        startRealtimePolling()
+    }
+
+    private fun startRealtimePolling() {
+        viewModelScope.launch {
+            while (true) {
+                delay(3000)
+                try {
+                    repository.fetchLatestPrices()
+                } catch (e: Exception) {
+                    // Ignorato o gestito per resilienza offline
+                }
+            }
+        }
     }
 
     // --- Market State ---
@@ -122,6 +137,13 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refreshMarket() {
         _forceRefreshTrigger.update { !it }
+        viewModelScope.launch {
+            try {
+                repository.fetchLatestPrices()
+            } catch (e: Exception) {
+                // Silently fails on empty network connection
+            }
+        }
     }
 
     fun setSearchQuery(query: String) {
