@@ -142,6 +142,10 @@ class CryptoRepository(
     ) {
         cryptoDao.executeTrade(isBuy, symbol, name, quantity, pricePerUnit, newCashBalance)
     }
+
+    suspend fun updateCashBalance(newBalance: Double) {
+        cryptoDao.updateCashBalance(newBalance)
+    }
 }
 
 // Sealed wrapper class representing states cleanly as mandated for proper UI state representations

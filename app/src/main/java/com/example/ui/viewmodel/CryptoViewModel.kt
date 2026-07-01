@@ -243,6 +243,16 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    fun updateCashBalance(newBalance: Double) {
+        viewModelScope.launch {
+            try {
+                repository.updateCashBalance(newBalance)
+            } catch (e: Exception) {
+                // Fallback
+            }
+        }
+    }
 }
 
 // Visual State UI models

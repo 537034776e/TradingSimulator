@@ -17,21 +17,29 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +52,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.data.local.CryptoHoldingEntity
@@ -67,6 +77,11 @@ fun PortfolioScreen(
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("I Miei Asset", "Cronologia")
+
+    var showDepositDialog by remember { mutableStateOf(false) }
+    var depositAmountInput by remember { mutableStateOf("") }
+    var isSetExactMode by remember { mutableStateOf(false) }
+    var dialogError by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -173,6 +188,32 @@ fun PortfolioScreen(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { showDepositDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("simulate_deposit_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountBalance,
+                        contentDescription = "Simula Bonifico",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Simula Bonifico / Modifica Saldo",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -210,6 +251,176 @@ fun PortfolioScreen(
             1 -> TransactionsTab(
                 transactions = portfolioState.transactions,
                 currencySetting = selectedCurrency
+            )
+        }
+
+        if (showDepositDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showDepositDialog = false
+                    depositAmountInput = ""
+                    isSetExactMode = false
+                    dialogError = null
+                },
+                title = {
+                    Text(
+                        text = if (isSetExactMode) "Modifica Saldo Contanti" else "Simula Bonifico",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (isSetExactMode) 
+                                "Imposta l'importo esatto del tuo saldo contante in ${selectedCurrency.code}." 
+                                else "Simula un bonifico sul tuo conto per ricaricare i fondi.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (!isSetExactMode) {
+                                Button(
+                                    onClick = { isSetExactMode = false; dialogError = null },
+                                    modifier = Modifier.weight(1.5f)
+                                ) {
+                                    Text("Bonifico", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                OutlinedButton(
+                                    onClick = { isSetExactMode = true; dialogError = null },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Imposta Saldo", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { isSetExactMode = false; dialogError = null },
+                                    modifier = Modifier.weight(1.5f)
+                                ) {
+                                    Text("Bonifico", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Button(
+                                    onClick = { isSetExactMode = true; dialogError = null },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Imposta Saldo", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+
+                        if (!isSetExactMode) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(100.0, 1000.0, 5000.0).forEach { amount ->
+                                    val amountInSelected = amount * selectedCurrency.usdToCurrencyRate
+                                    val formattedShortcut = if (selectedCurrency.isSymbolSuffix) {
+                                        "${String.format("%.0f", amountInSelected)} ${selectedCurrency.symbol}"
+                                    } else {
+                                        "${selectedCurrency.symbol}${String.format("%.0f", amountInSelected)}"
+                                    }
+                                    OutlinedButton(
+                                        onClick = {
+                                            val usdAmount = amount
+                                            val newBalance = portfolioState.cashBalance + usdAmount
+                                            viewModel.updateCashBalance(newBalance)
+                                            showDepositDialog = false
+                                            depositAmountInput = ""
+                                            dialogError = null
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "+$formattedShortcut",
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = depositAmountInput,
+                            onValueChange = {
+                                depositAmountInput = it
+                                dialogError = null
+                            },
+                            label = { 
+                                Text(
+                                    if (isSetExactMode) "Nuovo saldo (${selectedCurrency.code})" 
+                                    else "Importo bonifico (${selectedCurrency.code})"
+                                ) 
+                            },
+                            placeholder = { Text("0.00") },
+                            isError = dialogError != null,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Done
+                            ),
+                            modifier = Modifier.fillMaxWidth().testTag("deposit_amount_field")
+                        )
+
+                        if (dialogError != null) {
+                            Text(
+                                text = dialogError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val valueEntered = depositAmountInput.toDoubleOrNull()
+                            if (valueEntered == null || valueEntered <= 0) {
+                                dialogError = "Inserisci un importo valido e maggiore di zero."
+                                return@Button
+                            }
+
+                            val usdValue = valueEntered / selectedCurrency.usdToCurrencyRate
+                            val newBalance = if (isSetExactMode) {
+                                usdValue
+                            } else {
+                                portfolioState.cashBalance + usdValue
+                            }
+
+                            if (newBalance < 0) {
+                                dialogError = "Il saldo non può essere negativo."
+                                return@Button
+                            }
+
+                            viewModel.updateCashBalance(newBalance)
+                            showDepositDialog = false
+                            depositAmountInput = ""
+                            dialogError = null
+                        },
+                        modifier = Modifier.testTag("deposit_confirm_button")
+                    ) {
+                        Text("Conferma")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showDepositDialog = false
+                            depositAmountInput = ""
+                            isSetExactMode = false
+                            dialogError = null
+                        }
+                    ) {
+                        Text("Annulla")
+                    }
+                }
             )
         }
     }
