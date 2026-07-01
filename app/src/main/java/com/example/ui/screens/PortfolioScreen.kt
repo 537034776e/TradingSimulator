@@ -97,25 +97,35 @@ fun PortfolioScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
 
-                    // Implicit Intent Share Button
-                    IconButton(
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "Sto simulando il trading di criptovalute su Simulatore Crypto! Il valore totale del mio portafoglio è di ${selectedCurrency.format(portfolioState.totalPortfolioValue)} d'attivo. Inizia anche tu!"
-                                )
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Condividi il tuo portafoglio"))
-                        },
-                        modifier = Modifier.testTag("share_portfolio_button")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Share, 
-                            contentDescription = "Condividi bilancio",
-                            tint = MaterialTheme.colorScheme.primary
+                        CurrencyDropdown(
+                            selectedCurrency = selectedCurrency,
+                            onCurrencySelected = { viewModel.setSelectedCurrency(it) }
                         )
+
+                        // Implicit Intent Share Button
+                        IconButton(
+                            onClick = {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "Sto simulando il trading di criptovalute su Simulatore Crypto! Il valore totale del mio portafoglio è di ${selectedCurrency.format(portfolioState.totalPortfolioValue)} d'attivo. Inizia anche tu!"
+                                    )
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Condividi il tuo portafoglio"))
+                            },
+                            modifier = Modifier.testTag("share_portfolio_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share, 
+                                contentDescription = "Condividi bilancio",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
 

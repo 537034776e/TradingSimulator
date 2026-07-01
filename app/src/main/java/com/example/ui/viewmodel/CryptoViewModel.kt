@@ -46,7 +46,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // --- Currency State ---
-    private val _selectedCurrency = MutableStateFlow(CurrencySetting.USD)
+    private val _selectedCurrency = MutableStateFlow(CurrencySetting.EUR)
     val selectedCurrency: StateFlow<CurrencySetting> = _selectedCurrency.asStateFlow()
 
     fun setSelectedCurrency(currency: CurrencySetting) {
