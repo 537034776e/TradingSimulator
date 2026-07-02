@@ -23,8 +23,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
+import com.example.ui.viewmodel.CoinSortOption
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -77,6 +79,7 @@ fun MarketScreen(
     val searchVal by viewModel.searchQuery.collectAsState()
     val marketState by viewModel.marketUiState.collectAsState()
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
+    val selectedSortOption by viewModel.selectedSortOption.collectAsState()
 
     Scaffold(
         topBar = {
@@ -99,14 +102,41 @@ fun MarketScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.refreshMarket() },
-                        modifier = Modifier.testTag("refresh_market_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Aggiorna prezzi"
-                        )
+                    var sortMenuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(
+                            onClick = { sortMenuExpanded = true },
+                            modifier = Modifier.testTag("sort_market_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = "Ordina criptovalute"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            CoinSortOption.entries.forEach { option ->
+                                val isSelected = option == selectedSortOption
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = option.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.setSelectedSortOption(option)
+                                        sortMenuExpanded = false
+                                    },
+                                    modifier = Modifier.testTag("sort_option_${option.name}")
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

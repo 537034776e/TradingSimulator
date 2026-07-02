@@ -57,35 +57,43 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _selectedSortOption = MutableStateFlow(CoinSortOption.NAME_ASC)
+    val selectedSortOption: StateFlow<CoinSortOption> = _selectedSortOption.asStateFlow()
+
+    fun setSelectedSortOption(option: CoinSortOption) {
+        _selectedSortOption.value = option
+    }
+
     private val _forceRefreshTrigger = MutableStateFlow(true)
 
     // Observable flow of Coins merged with search queries and DB holdings
     val marketUiState: StateFlow<MarketUiState> = combine(
         _forceRefreshTrigger,
-        _searchQuery
-    ) { force, query ->
-        Pair(force, query)
-    }.combine(repository.getCoinsFlow(true)) { triggerPair, resource ->
-        val (_, query) = triggerPair
+        _searchQuery,
+        _selectedSortOption
+    ) { force, query, sortOpt ->
+        Triple(force, query, sortOpt)
+    }.combine(repository.getCoinsFlow(true)) { triggerTriple, resource ->
+        val (_, query, sortOpt) = triggerTriple
         when (resource) {
             is Resource.Loading -> {
                 MarketUiState(
                     isLoading = true,
-                    coins = filterCoins(resource.data ?: emptyList(), query),
+                    coins = filterAndSortCoins(resource.data ?: emptyList(), query, sortOpt),
                     errorMessage = null
                 )
             }
             is Resource.Success -> {
                 MarketUiState(
                     isLoading = false,
-                    coins = filterCoins(resource.data, query),
+                    coins = filterAndSortCoins(resource.data, query, sortOpt),
                     errorMessage = null
                 )
             }
             is Resource.Error -> {
                 MarketUiState(
                     isLoading = false,
-                    coins = filterCoins(resource.data ?: emptyList(), query),
+                    coins = filterAndSortCoins(resource.data ?: emptyList(), query, sortOpt),
                     errorMessage = resource.message
                 )
             }
@@ -163,11 +171,26 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
         _selectedCoinId.value = coinId
     }
 
-    private fun filterCoins(coins: List<CryptoCoin>, query: String): List<CryptoCoin> {
-        if (query.trim().isEmpty()) return coins
-        return coins.filter {
-            it.name.contains(query, ignoreCase = true) ||
-            it.symbol.contains(query, ignoreCase = true)
+    private fun filterAndSortCoins(
+        coins: List<CryptoCoin>,
+        query: String,
+        sortOpt: CoinSortOption
+    ): List<CryptoCoin> {
+        val filtered = if (query.trim().isEmpty()) {
+            coins
+        } else {
+            coins.filter {
+                it.name.contains(query, ignoreCase = true) ||
+                it.symbol.contains(query, ignoreCase = true)
+            }
+        }
+        return when (sortOpt) {
+            CoinSortOption.NAME_ASC -> filtered.sortedBy { it.name.lowercase() }
+            CoinSortOption.NAME_DESC -> filtered.sortedByDescending { it.name.lowercase() }
+            CoinSortOption.PRICE_ASC -> filtered.sortedBy { it.priceUsd }
+            CoinSortOption.PRICE_DESC -> filtered.sortedByDescending { it.priceUsd }
+            CoinSortOption.PERCENTAGE_ASC -> filtered.sortedBy { it.percentChange24h }
+            CoinSortOption.PERCENTAGE_DESC -> filtered.sortedByDescending { it.percentChange24h }
         }
     }
 
@@ -272,4 +295,13 @@ data class PortfolioUiState(
 sealed class TradeResult {
     data class Success(val message: String) : TradeResult()
     data class Error(val message: String) : TradeResult()
+}
+
+enum class CoinSortOption(val label: String) {
+    NAME_ASC("Nome (A-Z)"),
+    NAME_DESC("Nome (Z-A)"),
+    PRICE_ASC("Valore crescente"),
+    PRICE_DESC("Valore decrescente"),
+    PERCENTAGE_ASC("Percentuale crescente"),
+    PERCENTAGE_DESC("Percentuale decrescente")
 }
