@@ -108,6 +108,7 @@ class CryptoRepository(
             priceUsd = price,
             percentChange24h = change,
             imageUrl = getIconUrl(dto.symbol),
+            volume24h = dto.volume24 ?: 0.0,
             quantityOwned = holding?.quantity ?: 0.0,
             averagePurchasePrice = holding?.averagePurchasePrice ?: 0.0
         )

@@ -312,11 +312,27 @@ fun CoinRowItem(
                         )
                     }
                 }
-                Text(
-                    text = coin.symbol,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = coin.symbol,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Text(
+                        text = "Vol: ${formatVolume(coin.volume24h, currencySetting)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             }
 
             Column(
@@ -520,3 +536,21 @@ fun CurrencyDropdown(
         }
     }
 }
+
+fun formatVolume(valueInUsd: Double, currency: CurrencySetting): String {
+    val converted = valueInUsd * currency.usdToCurrencyRate
+    return when {
+        converted >= 1_000_000_000 -> {
+            val valStr = String.format("%.2f", converted / 1_000_000_000)
+            if (currency.isSymbolSuffix) "$valStr Mld ${currency.symbol}" else "${currency.symbol}$valStr Mld"
+        }
+        converted >= 1_000_000 -> {
+            val valStr = String.format("%.2f", converted / 1_000_000)
+            if (currency.isSymbolSuffix) "$valStr Mn ${currency.symbol}" else "${currency.symbol}$valStr Mn"
+        }
+        else -> {
+            currency.format(valueInUsd)
+        }
+    }
+}
+

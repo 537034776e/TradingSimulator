@@ -9,6 +9,7 @@ data class CryptoCoin(
     val priceUsd: Double,
     val percentChange24h: Double,
     val imageUrl: String,
+    val volume24h: Double = 0.0,
     // Add portfolio info if owned
     val quantityOwned: Double = 0.0,
     val averagePurchasePrice: Double = 0.0

@@ -191,6 +191,8 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             CoinSortOption.PRICE_DESC -> filtered.sortedByDescending { it.priceUsd }
             CoinSortOption.PERCENTAGE_ASC -> filtered.sortedBy { it.percentChange24h }
             CoinSortOption.PERCENTAGE_DESC -> filtered.sortedByDescending { it.percentChange24h }
+            CoinSortOption.VOLUME_ASC -> filtered.sortedBy { it.volume24h }
+            CoinSortOption.VOLUME_DESC -> filtered.sortedByDescending { it.volume24h }
         }
     }
 
@@ -303,5 +305,7 @@ enum class CoinSortOption(val label: String) {
     PRICE_ASC("Valore crescente"),
     PRICE_DESC("Valore decrescente"),
     PERCENTAGE_ASC("Percentuale crescente"),
-    PERCENTAGE_DESC("Percentuale decrescente")
+    PERCENTAGE_DESC("Percentuale decrescente"),
+    VOLUME_ASC("Volume crescente"),
+    VOLUME_DESC("Volume decrescente")
 }
