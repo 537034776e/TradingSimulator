@@ -206,7 +206,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
         onResult: (TradeResult) -> Unit
     ) {
         // String Empty / Formatting Check
-        val quantity = quantityStr.toDoubleOrNull()
+        val quantity = quantityStr.replace(',', '.').toDoubleOrNull()
         if (quantity == null || quantity <= 0.0) {
             onResult(TradeResult.Error("Inserisci una quantità superiore a zero."))
             return
@@ -235,7 +235,8 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = price,
                         newCashBalance = newCash
                     )
-                    onResult(TradeResult.Success("Acquisto completato: $quantity ${coin.symbol} per ${currency.format(totalCost)}"))
+                    val qtyFormatted = String.format("%.2f", quantity)
+                    onResult(TradeResult.Success("Acquisto completato: $qtyFormatted ${coin.symbol} per ${currency.format(totalCost)}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante l'acquisto: ${e.localizedMessage}"))
                 }
@@ -246,7 +247,9 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             val ownedQuantity = ownedHolding?.quantity ?: 0.0
 
             if (quantity > ownedQuantity) {
-                onResult(TradeResult.Error("Non possiedi abbastanza monete. Possedute: $ownedQuantity, Richieste: $quantity"))
+                val ownedFormatted = String.format("%.2f", ownedQuantity)
+                val quantityFormatted = String.format("%.2f", quantity)
+                onResult(TradeResult.Error("Non possiedi abbastanza monete. Possedute: $ownedFormatted, Richieste: $quantityFormatted"))
                 return
             }
 
@@ -261,7 +264,8 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = price,
                         newCashBalance = newCash
                     )
-                    onResult(TradeResult.Success("Vendita completata: $quantity ${coin.symbol} per ${currency.format(totalCost)}"))
+                    val qtyFormatted = String.format("%.2f", quantity)
+                    onResult(TradeResult.Success("Vendita completata: $qtyFormatted ${coin.symbol} per ${currency.format(totalCost)}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante la vendita: ${e.localizedMessage}"))
                 }

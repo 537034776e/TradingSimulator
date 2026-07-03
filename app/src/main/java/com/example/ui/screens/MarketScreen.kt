@@ -371,7 +371,7 @@ fun CoinRowItem(
                         shape = RoundedCornerShape(100.dp)
                     ) {
                         Text(
-                            text = "Possiedi: ${String.format("%.4f", coin.quantityOwned)}",
+                            text = "Possiedi: ${String.format("%.2f", coin.quantityOwned)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold,

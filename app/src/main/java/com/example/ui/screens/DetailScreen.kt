@@ -201,7 +201,7 @@ fun DetailScreen(
                             },
                             label = { Text("Quantità di ${coin.symbol}") },
                             placeholder = { Text("es. 0.05") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             isError = inputError != null,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -245,7 +245,7 @@ fun DetailScreen(
                         }
 
                         // Valuation indicators
-                        val qty = quantityInput.toDoubleOrNull() ?: 0.0
+                        val qty = quantityInput.replace(',', '.').toDoubleOrNull() ?: 0.0
                         if (qty > 0.0) {
                             Row(
                                 modifier = Modifier
@@ -875,7 +875,7 @@ fun HoldingsSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${String.format("%.4f", coin.quantityOwned)} ${coin.symbol}",
+                            text = "${String.format("%.2f", coin.quantityOwned)} ${coin.symbol}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )

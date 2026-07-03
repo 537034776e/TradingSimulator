@@ -498,7 +498,7 @@ fun MyAssetsTab(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "${String.format("%.4f", holding.quantity)} ${holding.symbol}",
+                                    text = "${String.format("%.2f", holding.quantity)} ${holding.symbol}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -523,9 +523,8 @@ fun MyAssetsTab(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
                                 text = "Prezzo d'acquisto medio: ${currencySetting.format(holding.averagePurchasePrice)}",
@@ -635,7 +634,7 @@ fun TransactionsTab(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${String.format("%.4f", tx.quantity)} ${tx.symbol}",
+                                text = "${String.format("%.2f", tx.quantity)} ${tx.symbol}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
