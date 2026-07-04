@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -21,6 +24,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Share
@@ -75,6 +79,26 @@ fun PortfolioScreen(
     val marketState by viewModel.marketUiState.collectAsState()
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    val csvContent = buildCsvContent(
+                        portfolioState = portfolioState,
+                        marketCoins = marketState.coins,
+                        currencySetting = selectedCurrency
+                    )
+                    outputStream.write(csvContent.toByteArray(Charsets.UTF_8))
+                }
+                Toast.makeText(context, "Esportazione completata con successo!", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Errore durante l'esportazione: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("I Miei Asset", "Cronologia")
 
@@ -121,23 +145,16 @@ fun PortfolioScreen(
                             onCurrencySelected = { viewModel.setSelectedCurrency(it) }
                         )
 
-                        // Implicit Intent Share Button
+                        // CSV Export Button
                         IconButton(
                             onClick = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        "Sto simulando il trading di criptovalute su Simulatore Crypto! Il valore totale del mio portafoglio è di ${selectedCurrency.format(portfolioState.totalPortfolioValue)} d'attivo. Inizia anche tu!"
-                                    )
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "Condividi il tuo portafoglio"))
+                                exportLauncher.launch("portafoglio_crypto.csv")
                             },
-                            modifier = Modifier.testTag("share_portfolio_button")
+                            modifier = Modifier.testTag("export_portfolio_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Share, 
-                                contentDescription = "Condividi bilancio",
+                                imageVector = Icons.Default.FileDownload, 
+                                contentDescription = "Esporta in CSV",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -655,4 +672,45 @@ fun TransactionsTab(
             }
         }
     }
+}
+
+private fun buildCsvContent(
+    portfolioState: com.example.ui.viewmodel.PortfolioUiState,
+    marketCoins: List<com.example.data.model.CryptoCoin>,
+    currencySetting: CurrencySetting
+): String {
+    val csvBuilder = java.lang.StringBuilder()
+    
+    // Header section
+    csvBuilder.append("RIEPILOGO PORTAFOGLIO CRIPTO\n")
+    csvBuilder.append("Valuta di riferimento;${currencySetting.name} (${currencySetting.code})\n")
+    csvBuilder.append("Bilancio Totale;${currencySetting.format(portfolioState.totalPortfolioValue).replace("\"", "\"\"")}\n")
+    csvBuilder.append("Fondi Contanti;${currencySetting.format(portfolioState.cashBalance).replace("\"", "\"\"")}\n")
+    
+    val cryptoVal = portfolioState.totalPortfolioValue - portfolioState.cashBalance
+    csvBuilder.append("Valore Criptovalute;${currencySetting.format(cryptoVal).replace("\"", "\"\"")}\n\n")
+    
+    // Assets header
+    csvBuilder.append("DETTAGLIO ATTIVITÀ (ASSETS)\n")
+    csvBuilder.append("Nome;Simbolo;Quantità Posseduta;Prezzo d'acquisto medio;Prezzo Attuale;Valore Totale;Profitto/Perdita (%)\n")
+    
+    portfolioState.holdings.forEach { holding ->
+        val coinModel = marketCoins.find { it.symbol.equals(holding.symbol, ignoreCase = true) }
+        val currentPrice = coinModel?.priceUsd ?: holding.averagePurchasePrice
+        val totalValue = holding.quantity * currentPrice
+        val purchaseValue = holding.quantity * holding.averagePurchasePrice
+        val returnVal = totalValue - purchaseValue
+        val returnPercent = if (purchaseValue > 0) (returnVal / purchaseValue) * 100.0 else 0.0
+        
+        val nameEscaped = holding.name.replace("\"", "\"\"")
+        val qtyStr = String.format("%.2f", holding.quantity)
+        val avgPriceStr = currencySetting.format(holding.averagePurchasePrice).replace("\"", "\"\"")
+        val currentPriceStr = currencySetting.format(currentPrice).replace("\"", "\"\"")
+        val totalValStr = currencySetting.format(totalValue).replace("\"", "\"\"")
+        val returnPercentStr = "${if (returnVal >= 0) "+" else ""}${String.format("%.2f", returnPercent)}%"
+        
+        csvBuilder.append("\"$nameEscaped\";${holding.symbol};$qtyStr;\"$avgPriceStr\";\"$currentPriceStr\";\"$totalValStr\";$returnPercentStr\n")
+    }
+    
+    return csvBuilder.toString()
 }
