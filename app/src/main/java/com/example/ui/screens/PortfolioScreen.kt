@@ -8,6 +8,7 @@ import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +45,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -100,7 +103,7 @@ fun PortfolioScreen(
     }
 
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("I Miei Asset", "Cronologia")
+    val tabs = listOf("I Miei Asset", "Cronologia", "Converti")
 
     var showDepositDialog by remember { mutableStateOf(false) }
     var depositAmountInput by remember { mutableStateOf("") }
@@ -268,6 +271,12 @@ fun PortfolioScreen(
             1 -> TransactionsTab(
                 transactions = portfolioState.transactions,
                 currencySetting = selectedCurrency
+            )
+            2 -> ConvertTab(
+                viewModel = viewModel,
+                portfolioState = portfolioState,
+                marketCoins = marketState.coins,
+                selectedCurrency = selectedCurrency
             )
         }
 
@@ -714,3 +723,413 @@ private fun buildCsvContent(
     
     return csvBuilder.toString()
 }
+
+@Composable
+fun ConvertTab(
+    viewModel: CryptoViewModel,
+    portfolioState: com.example.ui.viewmodel.PortfolioUiState,
+    marketCoins: List<com.example.data.model.CryptoCoin>,
+    selectedCurrency: CurrencySetting
+) {
+    val context = LocalContext.current
+    var sourceAsset by remember { mutableStateOf("CASH") } // "CASH" or coin.symbol
+    var targetAsset by remember { mutableStateOf("") } // "CASH" or coin.symbol
+    var amountInput by remember { mutableStateOf("") }
+    var resultMessage by remember { mutableStateOf<String?>(null) }
+    var isErrorResult by remember { mutableStateOf(false) }
+
+    // Dropdown expansion states
+    var sourceExpanded by remember { mutableStateOf(false) }
+    var targetExpanded by remember { mutableStateOf(false) }
+
+    // Automatically select a target asset if empty or equal to sourceAsset
+    val availableTargetCoins = marketCoins.filter { it.symbol != sourceAsset }
+    if (targetAsset.isEmpty() || targetAsset == sourceAsset) {
+        targetAsset = if (sourceAsset == "CASH") {
+            availableTargetCoins.firstOrNull()?.symbol ?: ""
+        } else {
+            "CASH"
+        }
+    }
+
+    // Source asset label and current owned amount
+    val sourceHolding = portfolioState.holdings.find { it.symbol.equals(sourceAsset, ignoreCase = true) }
+    val maxAvailable = if (sourceAsset == "CASH") {
+        portfolioState.cashBalance * selectedCurrency.usdToCurrencyRate
+    } else {
+        sourceHolding?.quantity ?: 0.0
+    }
+
+    val sourceLabel = if (sourceAsset == "CASH") {
+        "Contanti (${selectedCurrency.code})"
+    } else {
+        val coin = marketCoins.find { it.symbol.equals(sourceAsset, ignoreCase = true) }
+        "${coin?.name ?: sourceAsset} ($sourceAsset)"
+    }
+
+    val targetLabel = if (targetAsset == "CASH") {
+        "Contanti (${selectedCurrency.code})"
+    } else {
+        val coin = marketCoins.find { it.symbol.equals(targetAsset, ignoreCase = true) }
+        "${coin?.name ?: targetAsset} ($targetAsset)"
+    }
+
+    // Calculate preview conversion output
+    val parsedAmount = amountInput.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val estimatedOutput: Double = if (parsedAmount > 0.0) {
+        if (sourceAsset == "CASH") {
+            // Fiat to Crypto
+            val targetCoin = marketCoins.find { it.symbol.equals(targetAsset, ignoreCase = true) }
+            if (targetCoin != null && targetCoin.priceUsd > 0) {
+                val usdAmount = parsedAmount / selectedCurrency.usdToCurrencyRate
+                usdAmount / targetCoin.priceUsd
+            } else 0.0
+        } else if (targetAsset == "CASH") {
+            // Crypto to Fiat
+            val sourceCoin = marketCoins.find { it.symbol.equals(sourceAsset, ignoreCase = true) }
+            val sourcePriceUsd = sourceCoin?.priceUsd ?: sourceHolding?.averagePurchasePrice ?: 0.0
+            val usdVal = parsedAmount * sourcePriceUsd
+            usdVal * selectedCurrency.usdToCurrencyRate
+        } else {
+            // Crypto to Crypto
+            val sourceCoin = marketCoins.find { it.symbol.equals(sourceAsset, ignoreCase = true) }
+            val targetCoin = marketCoins.find { it.symbol.equals(targetAsset, ignoreCase = true) }
+            val sourcePriceUsd = sourceCoin?.priceUsd ?: sourceHolding?.averagePurchasePrice ?: 0.0
+            if (sourcePriceUsd > 0 && targetCoin != null && targetCoin.priceUsd > 0) {
+                (parsedAmount * sourcePriceUsd) / targetCoin.priceUsd
+            } else 0.0
+        }
+    } else {
+        0.0
+    }
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(bottom = 24.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Seleziona Valute",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    // --- SOURCE ASSET SELECTOR ---
+                    Column {
+                        Text(
+                            text = "Da (Sorgente):",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { sourceExpanded = true },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth().testTag("convert_source_select_button"),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = sourceLabel,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "▼",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = sourceExpanded,
+                                onDismissRequest = { sourceExpanded = false },
+                                modifier = Modifier.fillMaxWidth(0.9f)
+                            ) {
+                                // Option 1: Cash (Always available, but user needs cash balance)
+                                DropdownMenuItem(
+                                    text = { 
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("Contanti (${selectedCurrency.code})")
+                                            Text(selectedCurrency.format(portfolioState.cashBalance))
+                                        }
+                                    },
+                                    onClick = {
+                                        sourceAsset = "CASH"
+                                        sourceExpanded = false
+                                    },
+                                    modifier = Modifier.testTag("source_option_cash")
+                                )
+
+                                // Option 2: Owned Cryptos from Portfolio
+                                portfolioState.holdings.forEach { holding ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("${holding.name} (${holding.symbol})")
+                                                Text("${String.format("%.4f", holding.quantity)} ${holding.symbol}")
+                                            }
+                                        },
+                                        onClick = {
+                                            sourceAsset = holding.symbol
+                                            sourceExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("source_option_${holding.symbol}")
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // --- TARGET ASSET SELECTOR ---
+                    Column {
+                        Text(
+                            text = "A (Destinazione):",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { targetExpanded = true },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth().testTag("convert_target_select_button"),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = targetLabel,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "▼",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = targetExpanded,
+                                onDismissRequest = { targetExpanded = false },
+                                modifier = Modifier.fillMaxWidth(0.9f)
+                            ) {
+                                // Option 1: Cash (only available if source is NOT Cash)
+                                if (sourceAsset != "CASH") {
+                                    DropdownMenuItem(
+                                        text = { Text("Contanti (${selectedCurrency.code})") },
+                                        onClick = {
+                                            targetAsset = "CASH"
+                                            targetExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("target_option_cash")
+                                    )
+                                }
+
+                                // Option 2: All Cryptos from Market
+                                availableTargetCoins.forEach { coin ->
+                                    DropdownMenuItem(
+                                        text = { Text("${coin.name} (${coin.symbol})") },
+                                        onClick = {
+                                            targetAsset = coin.symbol
+                                            targetExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("target_option_${coin.symbol}")
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Inserisci Importo",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    // Display max available balance helper
+                    val balanceHelperText = if (sourceAsset == "CASH") {
+                        "Saldo disponibile: ${selectedCurrency.format(portfolioState.cashBalance)}"
+                    } else {
+                        "Disponibili: ${String.format("%.6f", maxAvailable)} $sourceAsset"
+                    }
+
+                    Text(
+                        text = balanceHelperText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = amountInput,
+                            onValueChange = {
+                                amountInput = it
+                                resultMessage = null
+                            },
+                            placeholder = { Text("0.00") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Done
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("convert_amount_field")
+                        )
+
+                        Button(
+                            onClick = {
+                                amountInput = if (sourceAsset == "CASH") {
+                                    String.format("%.2f", maxAvailable).replace(',', '.')
+                                } else {
+                                    String.format("%.6f", maxAvailable).replace(',', '.')
+                                }
+                                resultMessage = null
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("convert_max_button")
+                        ) {
+                            Text("Max")
+                        }
+                    }
+
+                    // --- PREVIEW OUTPUT SECTION ---
+                    if (parsedAmount > 0.0) {
+                        val previewText = if (targetAsset == "CASH") {
+                            "Riceverai circa: ${selectedCurrency.format(estimatedOutput)}"
+                        } else {
+                            "Riceverai circa: ${String.format("%.6f", estimatedOutput)} $targetAsset"
+                        }
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = previewText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    // --- ERROR / SUCCESS FEEDBACK ---
+                    if (resultMessage != null) {
+                        val textColor = if (isErrorResult) MaterialTheme.colorScheme.error else GreenCrypto
+                        Text(
+                            text = resultMessage ?: "",
+                            color = textColor,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 4.dp).testTag("convert_feedback_text")
+                        )
+                    }
+
+                    // --- SUBMIT BUTTON ---
+                    Button(
+                        onClick = {
+                            if (amountInput.trim().isEmpty() || parsedAmount <= 0.0) {
+                                isErrorResult = true
+                                resultMessage = "Inserisci un importo maggiore di zero."
+                                return@Button
+                            }
+
+                            if (parsedAmount > maxAvailable) {
+                                isErrorResult = true
+                                resultMessage = "Fondi insufficienti."
+                                return@Button
+                            }
+
+                            viewModel.performConversion(
+                                sourceSymbol = sourceAsset,
+                                targetSymbol = targetAsset,
+                                amountStr = amountInput,
+                                marketCoins = marketCoins,
+                                onResult = { res ->
+                                    when (res) {
+                                        is com.example.ui.viewmodel.TradeResult.Success -> {
+                                            isErrorResult = false
+                                            resultMessage = res.message
+                                            amountInput = ""
+                                            Toast.makeText(context, "Conversione completata!", Toast.LENGTH_SHORT).show()
+                                        }
+                                        is com.example.ui.viewmodel.TradeResult.Error -> {
+                                            isErrorResult = true
+                                            resultMessage = res.message
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("convert_submit_button"),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Converti Ora",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

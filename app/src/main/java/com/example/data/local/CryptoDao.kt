@@ -112,4 +112,82 @@ interface CryptoDao {
             )
         )
     }
+
+    @Transaction
+    suspend fun executeCryptoToCryptoConversion(
+        sourceSymbol: String,
+        sourceName: String,
+        sourceQuantity: Double,
+        sourcePriceUsd: Double,
+        targetSymbol: String,
+        targetName: String,
+        targetQuantity: Double,
+        targetPriceUsd: Double
+    ) {
+        // 1. Decrease source asset
+        val existingSource = getHoldingBySymbol(sourceSymbol)
+        if (existingSource != null) {
+            val remainingQty = existingSource.quantity - sourceQuantity
+            if (remainingQty <= 0.0001) {
+                deleteHolding(sourceSymbol)
+            } else {
+                insertHolding(
+                    CryptoHoldingEntity(
+                        symbol = sourceSymbol,
+                        name = sourceName,
+                        quantity = remainingQty,
+                        averagePurchasePrice = existingSource.averagePurchasePrice
+                    )
+                )
+            }
+        }
+
+        // 2. Increase target asset
+        val existingTarget = getHoldingBySymbol(targetSymbol)
+        if (existingTarget != null) {
+            val totalQuantity = existingTarget.quantity + targetQuantity
+            val totalCost = (existingTarget.quantity * existingTarget.averagePurchasePrice) + (targetQuantity * targetPriceUsd)
+            val avgPrice = if (totalQuantity > 0) totalCost / totalQuantity else targetPriceUsd
+            insertHolding(
+                CryptoHoldingEntity(
+                    symbol = targetSymbol,
+                    name = targetName,
+                    quantity = totalQuantity,
+                    averagePurchasePrice = avgPrice
+                )
+            )
+        } else {
+            insertHolding(
+                CryptoHoldingEntity(
+                    symbol = targetSymbol,
+                    name = targetName,
+                    quantity = targetQuantity,
+                    averagePurchasePrice = targetPriceUsd
+                )
+            )
+        }
+
+        // 3. Insert transaction history
+        val totalValue = sourceQuantity * sourcePriceUsd
+        insertTransaction(
+            TransactionEntity(
+                symbol = sourceSymbol,
+                coinName = sourceName,
+                type = "SELL",
+                quantity = sourceQuantity,
+                pricePerUnit = sourcePriceUsd,
+                totalValue = totalValue
+            )
+        )
+        insertTransaction(
+            TransactionEntity(
+                symbol = targetSymbol,
+                coinName = targetName,
+                type = "BUY",
+                quantity = targetQuantity,
+                pricePerUnit = targetPriceUsd,
+                totalValue = totalValue
+            )
+        )
+    }
 }

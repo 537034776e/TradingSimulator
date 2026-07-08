@@ -144,6 +144,28 @@ class CryptoRepository(
         cryptoDao.executeTrade(isBuy, symbol, name, quantity, pricePerUnit, newCashBalance)
     }
 
+    suspend fun executeCryptoToCryptoConversion(
+        sourceSymbol: String,
+        sourceName: String,
+        sourceQuantity: Double,
+        sourcePriceUsd: Double,
+        targetSymbol: String,
+        targetName: String,
+        targetQuantity: Double,
+        targetPriceUsd: Double
+    ) {
+        cryptoDao.executeCryptoToCryptoConversion(
+            sourceSymbol = sourceSymbol,
+            sourceName = sourceName,
+            sourceQuantity = sourceQuantity,
+            sourcePriceUsd = sourcePriceUsd,
+            targetSymbol = targetSymbol,
+            targetName = targetName,
+            targetQuantity = targetQuantity,
+            targetPriceUsd = targetPriceUsd
+        )
+    }
+
     suspend fun updateCashBalance(newBalance: Double) {
         cryptoDao.updateCashBalance(newBalance)
     }

@@ -282,6 +282,141 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    fun performConversion(
+        sourceSymbol: String, // could be "CASH" or a crypto symbol
+        targetSymbol: String, // could be "CASH" or a crypto symbol
+        amountStr: String,
+        marketCoins: List<CryptoCoin>,
+        onResult: (TradeResult) -> Unit
+    ) {
+        val amount = amountStr.replace(',', '.').toDoubleOrNull()
+        if (amount == null || amount <= 0.0) {
+            onResult(TradeResult.Error("Inserisci un importo valido superiore a zero."))
+            return
+        }
+
+        val currency = _selectedCurrency.value
+
+        if (sourceSymbol == "CASH" && targetSymbol == "CASH") {
+            onResult(TradeResult.Error("Non puoi convertire contanti in contanti."))
+            return
+        }
+
+        if (sourceSymbol == targetSymbol) {
+            onResult(TradeResult.Error("I simboli di origine e destinazione devono essere diversi."))
+            return
+        }
+
+        if (sourceSymbol == "CASH") {
+            // Converting from CASH to Crypto (equivalent to a BUY)
+            val targetCoin = marketCoins.find { it.symbol.equals(targetSymbol, ignoreCase = true) }
+            if (targetCoin == null) {
+                onResult(TradeResult.Error("Criptovaluta di destinazione non trovata."))
+                return
+            }
+
+            // The input amount is in selected fiat currency, convert to USD
+            val amountUsd = amount / currency.usdToCurrencyRate
+            val currentCash = portfolioUiState.value.cashBalance
+
+            if (amountUsd > currentCash) {
+                onResult(TradeResult.Error("Fondi in contanti insufficienti. Richiesti: ${currency.format(amountUsd)}, Disponibili: ${currency.format(currentCash)}"))
+                return
+            }
+
+            val targetQuantity = amountUsd / targetCoin.priceUsd
+            val newCash = currentCash - amountUsd
+
+            viewModelScope.launch {
+                try {
+                    repository.executeTrade(
+                        isBuy = true,
+                        symbol = targetCoin.symbol,
+                        name = targetCoin.name,
+                        quantity = targetQuantity,
+                        pricePerUnit = targetCoin.priceUsd,
+                        newCashBalance = newCash
+                    )
+                    val qtyFormatted = String.format("%.4f", targetQuantity)
+                    onResult(TradeResult.Success("Conversione completata: hai convertito ${currency.format(amountUsd)} in $qtyFormatted ${targetCoin.symbol}"))
+                } catch (e: Exception) {
+                    onResult(TradeResult.Error("Errore durante la conversione: ${e.localizedMessage}"))
+                }
+            }
+        } else if (targetSymbol == "CASH") {
+            // Converting from Crypto to CASH (equivalent to a SELL)
+            val sourceHolding = portfolioUiState.value.holdings.find { it.symbol.equals(sourceSymbol, ignoreCase = true) }
+            if (sourceHolding == null || amount > sourceHolding.quantity) {
+                val owned = sourceHolding?.quantity ?: 0.0
+                onResult(TradeResult.Error("Quantità insufficiente di ${sourceSymbol}. Possiedi: ${String.format("%.4f", owned)}"))
+                return
+            }
+
+            val sourceCoin = marketCoins.find { it.symbol.equals(sourceSymbol, ignoreCase = true) }
+            val sourcePriceUsd = sourceCoin?.priceUsd ?: sourceHolding.averagePurchasePrice
+            val totalValueUsd = amount * sourcePriceUsd
+            val currentCash = portfolioUiState.value.cashBalance
+            val newCash = currentCash + totalValueUsd
+
+            viewModelScope.launch {
+                try {
+                    repository.executeTrade(
+                        isBuy = false,
+                        symbol = sourceHolding.symbol,
+                        name = sourceHolding.name,
+                        quantity = amount,
+                        pricePerUnit = sourcePriceUsd,
+                        newCashBalance = newCash
+                    )
+                    val formattedFiatValue = currency.format(totalValueUsd)
+                    onResult(TradeResult.Success("Conversione completata: hai convertito ${String.format("%.4f", amount)} ${sourceSymbol} in $formattedFiatValue contanti"))
+                } catch (e: Exception) {
+                    onResult(TradeResult.Error("Errore durante la conversione: ${e.localizedMessage}"))
+                }
+            }
+        } else {
+            // Converting from Crypto to Crypto
+            val sourceHolding = portfolioUiState.value.holdings.find { it.symbol.equals(sourceSymbol, ignoreCase = true) }
+            if (sourceHolding == null || amount > sourceHolding.quantity) {
+                val owned = sourceHolding?.quantity ?: 0.0
+                onResult(TradeResult.Error("Quantità insufficiente di ${sourceSymbol}. Possiedi: ${String.format("%.4f", owned)}"))
+                return
+            }
+
+            val sourceCoin = marketCoins.find { it.symbol.equals(sourceSymbol, ignoreCase = true) }
+            val targetCoin = marketCoins.find { it.symbol.equals(targetSymbol, ignoreCase = true) }
+
+            if (targetCoin == null) {
+                onResult(TradeResult.Error("Criptovaluta di destinazione non trovata."))
+                return
+            }
+
+            val sourcePriceUsd = sourceCoin?.priceUsd ?: sourceHolding.averagePurchasePrice
+            val totalValueUsd = amount * sourcePriceUsd
+            val targetQuantity = totalValueUsd / targetCoin.priceUsd
+
+            viewModelScope.launch {
+                try {
+                    repository.executeCryptoToCryptoConversion(
+                        sourceSymbol = sourceHolding.symbol,
+                        sourceName = sourceHolding.name,
+                        sourceQuantity = amount,
+                        sourcePriceUsd = sourcePriceUsd,
+                        targetSymbol = targetCoin.symbol,
+                        targetName = targetCoin.name,
+                        targetQuantity = targetQuantity,
+                        targetPriceUsd = targetCoin.priceUsd
+                    )
+                    val srcQtyFormatted = String.format("%.4f", amount)
+                    val tgtQtyFormatted = String.format("%.4f", targetQuantity)
+                    onResult(TradeResult.Success("Conversione completata: $srcQtyFormatted ${sourceSymbol} convertiti in $tgtQtyFormatted ${targetSymbol}"))
+                } catch (e: Exception) {
+                    onResult(TradeResult.Error("Errore durante la conversione: ${e.localizedMessage}"))
+                }
+            }
+        }
+    }
 }
 
 // Visual State UI models
