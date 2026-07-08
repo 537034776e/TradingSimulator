@@ -29,7 +29,7 @@ class CryptoRepository(
      */
     suspend fun fetchLatestPrices() {
         try {
-            val response = apiService.getTickers(start = 0, limit = 50)
+            val response = apiService.getTickers(start = 0, limit = 100)
             _tickersFlow.value = response.data
         } catch (e: IOException) {
             // Soft fail: preserve existing cache to avoid screen flickering/errors
@@ -51,7 +51,7 @@ class CryptoRepository(
 
         if (forceRefresh || _tickersFlow.value.isEmpty()) {
             try {
-                val response = apiService.getTickers(start = 0, limit = 50)
+                val response = apiService.getTickers(start = 0, limit = 100)
                 _tickersFlow.value = response.data
             } catch (e: IOException) {
                 // Network error (offline state)
