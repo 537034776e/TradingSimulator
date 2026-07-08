@@ -27,6 +27,9 @@ interface CryptoDao {
     @Query("SELECT * FROM crypto_holdings")
     fun getAllHoldingsFlow(): Flow<List<CryptoHoldingEntity>>
 
+    @Query("SELECT * FROM crypto_holdings")
+    suspend fun getAllHoldings(): List<CryptoHoldingEntity>
+
     @Query("SELECT * FROM crypto_holdings WHERE symbol = :symbol")
     suspend fun getHoldingBySymbol(symbol: String): CryptoHoldingEntity?
 
