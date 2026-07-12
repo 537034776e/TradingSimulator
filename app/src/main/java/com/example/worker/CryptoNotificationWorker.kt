@@ -55,35 +55,39 @@ class CryptoNotificationWorker(
             }
 
             return Result.success()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("CryptoWorker", "Error in background work: ${e.localizedMessage}")
             return Result.retry()
         }
     }
 
     private fun showNotification(title: String, message: String) {
-        val channelId = "crypto_price_alerts"
-        val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        try {
+            val channelId = "crypto_price_alerts"
+            val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Crypto Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifiche per variazioni positive del portafoglio"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    channelId,
+                    "Crypto Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notifiche per variazioni positive del portafoglio"
+                }
+                notificationManager.createNotificationChannel(channel)
             }
-            notificationManager.createNotificationChannel(channel)
+
+            val builder = NotificationCompat.Builder(applicationContext, channelId)
+                .setSmallIcon(android.R.drawable.star_big_on) // use standard system star icon
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+
+            notificationManager.notify(1001, builder.build())
+        } catch (t: Throwable) {
+            Log.e("CryptoWorker", "Failed to show notification: ${t.localizedMessage}")
         }
-
-        val builder = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(android.R.drawable.star_big_on) // use standard system star icon
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-
-        notificationManager.notify(1001, builder.build())
     }
 }
