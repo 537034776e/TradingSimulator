@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.Intent
 import android.widget.Toast
 import java.util.Locale
+import com.example.ui.util.FormatUtils
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -876,7 +877,7 @@ fun HoldingsSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${String.format(Locale.getDefault(), "%.2f", coin.quantityOwned)} ${coin.symbol}",
+                            text = "${FormatUtils.formatCryptoQuantity(coin.quantityOwned)} ${coin.symbol}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )

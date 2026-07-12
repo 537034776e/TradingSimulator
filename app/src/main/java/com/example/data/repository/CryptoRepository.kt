@@ -169,6 +169,14 @@ class CryptoRepository(
     suspend fun updateCashBalance(newBalance: Double) {
         cryptoDao.updateCashBalance(newBalance)
     }
+
+    suspend fun simulateDeposit(amount: Double) {
+        cryptoDao.simulateDeposit(amount)
+    }
+
+    suspend fun setExactBalance(exactBalance: Double) {
+        cryptoDao.setExactBalance(exactBalance)
+    }
 }
 
 // Sealed wrapper class representing states cleanly as mandated for proper UI state representations

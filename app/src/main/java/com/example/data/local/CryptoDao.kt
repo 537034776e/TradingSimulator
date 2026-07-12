@@ -23,6 +23,12 @@ interface CryptoDao {
     @Query("UPDATE user_profile SET cashBalance = :newBalance WHERE id = 1")
     suspend fun updateCashBalance(newBalance: Double)
 
+    @Query("UPDATE user_profile SET cashBalance = cashBalance + :amount, totalDeposited = totalDeposited + :amount WHERE id = 1")
+    suspend fun simulateDeposit(amount: Double)
+
+    @Query("UPDATE user_profile SET cashBalance = :exactBalance, totalDeposited = :exactBalance WHERE id = 1")
+    suspend fun setExactBalance(exactBalance: Double)
+
     // --- Crypto Holdings ---
     @Query("SELECT * FROM crypto_holdings")
     fun getAllHoldingsFlow(): Flow<List<CryptoHoldingEntity>>

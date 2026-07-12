@@ -1,6 +1,8 @@
 package com.example.data.model
 
 import java.util.Locale
+import java.math.BigDecimal
+import kotlin.math.abs
 
 enum class CurrencySetting(
     val symbol: String,
@@ -22,14 +24,48 @@ enum class CurrencySetting(
     fun format(valueInUsd: Double): String {
         val converted = valueInUsd * usdToCurrencyRate
         val formattedValue = if (this == JPY) {
-            String.format(Locale.getDefault(), "%,.0f", converted)
+            if (converted > 0.0 && converted < 1.0) {
+                formatSmallValue(converted)
+            } else {
+                String.format(Locale.getDefault(), "%,.0f", converted)
+            }
         } else {
-            String.format(Locale.getDefault(), "%,.2f", converted)
+            if (converted > 0.0 && converted < 1.0) {
+                formatSmallValue(converted)
+            } else {
+                String.format(Locale.getDefault(), "%,.2f", converted)
+            }
         }
         return if (isSymbolSuffix) {
             "$formattedValue $symbol"
         } else {
             "$symbol$formattedValue"
         }
+    }
+
+    private fun formatSmallValue(value: Double): String {
+        val absValue = abs(value)
+        if (absValue == 0.0) return "0.00"
+        
+        val bd = try {
+            BigDecimal(absValue.toString())
+        } catch (e: Exception) {
+            BigDecimal.ZERO
+        }
+        val plain = bd.toPlainString()
+        val dotIndex = plain.indexOf('.')
+        if (dotIndex == -1) {
+            return String.format(Locale.getDefault(), "%,.2f", value)
+        }
+        
+        var scale = 2
+        for (i in (dotIndex + 1) until plain.length) {
+            if (plain[i] != '0') {
+                scale = i - dotIndex
+                break
+            }
+        }
+        val finalScale = maxOf(2, scale)
+        return String.format(Locale.getDefault(), "%.${finalScale}f", value)
     }
 }

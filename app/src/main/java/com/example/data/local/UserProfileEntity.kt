@@ -6,5 +6,6 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "user_profile")
 data class UserProfileEntity(
     @PrimaryKey val id: Int = 1,
-    val cashBalance: Double = 10000.0
+    val cashBalance: Double = 10000.0,
+    val totalDeposited: Double = 10000.0
 )

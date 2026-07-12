@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import java.util.Locale
+import com.example.ui.util.FormatUtils
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -372,7 +373,7 @@ fun CoinRowItem(
                         shape = RoundedCornerShape(100.dp)
                     ) {
                         Text(
-                            text = "Possiedi: ${String.format(Locale.getDefault(), "%.2f", coin.quantityOwned)}",
+                            text = "Possiedi: ${FormatUtils.formatCryptoQuantity(coin.quantityOwned)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold,

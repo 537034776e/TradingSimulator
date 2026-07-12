@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.Intent
 import android.widget.Toast
 import java.util.Locale
+import com.example.ui.util.FormatUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.text.format.DateFormat
@@ -173,6 +174,34 @@ fun PortfolioScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+
+                // Variazione percentuale rispetto al totale inizialmente versato
+                val totalDeposited = portfolioState.totalDeposited
+                val variationPercent = if (totalDeposited > 0) {
+                    ((portfolioState.totalPortfolioValue - totalDeposited) / totalDeposited) * 100.0
+                } else {
+                    0.0
+                }
+                val isPositive = variationPercent >= 0.0
+                val sign = if (isPositive) "+" else ""
+                val variationColor = if (isPositive) GreenCrypto else RedCrypto
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "$sign${String.format(Locale.getDefault(), "%.2f", variationPercent)}%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = variationColor
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "rispetto al versato (${selectedCurrency.format(totalDeposited)})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -356,8 +385,7 @@ fun PortfolioScreen(
                                     OutlinedButton(
                                         onClick = {
                                             val usdAmount = amount
-                                            val newBalance = portfolioState.cashBalance + usdAmount
-                                            viewModel.updateCashBalance(newBalance)
+                                            viewModel.simulateDeposit(usdAmount)
                                             showDepositDialog = false
                                             depositAmountInput = ""
                                             dialogError = null
@@ -415,18 +443,15 @@ fun PortfolioScreen(
                             }
 
                             val usdValue = valueEntered / selectedCurrency.usdToCurrencyRate
-                            val newBalance = if (isSetExactMode) {
-                                usdValue
+                            if (isSetExactMode) {
+                                if (usdValue < 0) {
+                                    dialogError = "Il saldo non può essere negativo."
+                                    return@Button
+                                }
+                                viewModel.setExactBalance(usdValue)
                             } else {
-                                portfolioState.cashBalance + usdValue
+                                viewModel.simulateDeposit(usdValue)
                             }
-
-                            if (newBalance < 0) {
-                                dialogError = "Il saldo non può essere negativo."
-                                return@Button
-                            }
-
-                            viewModel.updateCashBalance(newBalance)
                             showDepositDialog = false
                             depositAmountInput = ""
                             dialogError = null
@@ -525,7 +550,7 @@ fun MyAssetsTab(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "${String.format(Locale.getDefault(), "%.2f", holding.quantity)} ${holding.symbol}",
+                                    text = "${FormatUtils.formatCryptoQuantity(holding.quantity)} ${holding.symbol}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -661,7 +686,7 @@ fun TransactionsTab(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${String.format(Locale.getDefault(), "%.2f", tx.quantity)} ${tx.symbol}",
+                                text = "${FormatUtils.formatCryptoQuantity(tx.quantity)} ${tx.symbol}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -713,7 +738,7 @@ private fun buildCsvContent(
         val returnPercent = if (purchaseValue > 0) (returnVal / purchaseValue) * 100.0 else 0.0
         
         val nameEscaped = holding.name.replace("\"", "\"\"")
-        val qtyStr = String.format(Locale.getDefault(), "%.2f", holding.quantity)
+        val qtyStr = FormatUtils.formatCryptoQuantity(holding.quantity)
         val avgPriceStr = currencySetting.format(holding.averagePurchasePrice).replace("\"", "\"\"")
         val currentPriceStr = currencySetting.format(currentPrice).replace("\"", "\"\"")
         val totalValStr = currencySetting.format(totalValue).replace("\"", "\"\"")
@@ -893,7 +918,7 @@ fun ConvertTab(
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
                                                 Text("${holding.name} (${holding.symbol})")
-                                                Text("${String.format(Locale.getDefault(), "%.4f", holding.quantity)} ${holding.symbol}")
+                                                Text("${FormatUtils.formatCryptoQuantity(holding.quantity)} ${holding.symbol}")
                                             }
                                         },
                                         onClick = {
@@ -998,7 +1023,7 @@ fun ConvertTab(
                     val balanceHelperText = if (sourceAsset == "CASH") {
                         "Saldo disponibile: ${selectedCurrency.format(portfolioState.cashBalance)}"
                     } else {
-                        "Disponibili: ${String.format(Locale.getDefault(), "%.6f", maxAvailable)} $sourceAsset"
+                        "Disponibili: ${FormatUtils.formatCryptoQuantity(maxAvailable)} $sourceAsset"
                     }
 
                     Text(
@@ -1034,7 +1059,7 @@ fun ConvertTab(
                                 amountInput = if (sourceAsset == "CASH") {
                                     String.format(Locale.getDefault(), "%.2f", maxAvailable).replace(',', '.')
                                 } else {
-                                    String.format(Locale.getDefault(), "%.6f", maxAvailable).replace(',', '.')
+                                    FormatUtils.formatCryptoQuantity(maxAvailable).replace(',', '.')
                                 }
                                 resultMessage = null
                             },
@@ -1050,7 +1075,7 @@ fun ConvertTab(
                         val previewText = if (targetAsset == "CASH") {
                             "Riceverai circa: ${selectedCurrency.format(estimatedOutput)}"
                         } else {
-                            "Riceverai circa: ${String.format(Locale.getDefault(), "%.6f", estimatedOutput)} $targetAsset"
+                            "Riceverai circa: ${FormatUtils.formatCryptoQuantity(estimatedOutput)} $targetAsset"
                         }
 
                         Card(
