@@ -78,25 +78,49 @@ import com.example.ui.theme.RedCrypto
 import com.example.ui.viewmodel.CryptoViewModel
 import com.example.ui.viewmodel.TradeResult
 
-@OptIn(ExperimentalMaterial3Api::class)
+import com.example.ui.viewmodel.PortfolioUiState
+import androidx.compose.ui.tooling.preview.Preview
+
 @Composable
 fun DetailScreen(
     viewModel: CryptoViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val coinState by viewModel.selectedCoin.collectAsState()
     val portfolioState by viewModel.portfolioUiState.collectAsState()
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
 
+    DetailScreenContent(
+        coin = coinState,
+        portfolioState = portfolioState,
+        selectedCurrency = selectedCurrency,
+        onNavigateBack = onNavigateBack,
+        onPerformTrade = { coin, isBuy, quantity, onResult ->
+            viewModel.performTrade(coin, isBuy, quantity, onResult)
+        },
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetailScreenContent(
+    coin: CryptoCoin?,
+    portfolioState: PortfolioUiState,
+    selectedCurrency: CurrencySetting,
+    onNavigateBack: () -> Unit,
+    onPerformTrade: (CryptoCoin, Boolean, String, (TradeResult) -> Unit) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
     var quantityInput by remember { mutableStateOf("") }
     var inputError by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(coinState?.name ?: "Dettaglio", fontWeight = FontWeight.SemiBold) },
+                title = { Text(coin?.name ?: "Dettaglio", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
@@ -109,7 +133,7 @@ fun DetailScreen(
                     }
                 },
                 actions = {
-                    coinState?.let { coin ->
+                    coin?.let { c ->
                         IconButton(
                             onClick = {
                                 // Implicit Intent - Share Prices with action ACTION_SEND
@@ -117,7 +141,7 @@ fun DetailScreen(
                                     type = "text/plain"
                                     putExtra(
                                         Intent.EXTRA_TEXT,
-                                        "La criptovaluta ${coin.name} (${coin.symbol}) viene valutata a ${selectedCurrency.format(coin.priceUsd)} (Variazione 24h: ${if (coin.percentChange24h >= 0) "+" else ""}${String.format(Locale.getDefault(), "%.2f", coin.percentChange24h)}%). Negozia in sicurezza con l'app Simulatore Crypto!"
+                                        "La criptovaluta ${c.name} (${c.symbol}) viene valutata a ${selectedCurrency.format(c.priceUsd)} (Variazione 24h: ${if (c.percentChange24h >= 0) "+" else ""}${String.format(Locale.getDefault(), "%.2f", c.percentChange24h)}%). Negozia in sicurezza con l'app Simulatore Crypto!"
                                     )
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "Condividi questa quotazione"))
@@ -136,7 +160,6 @@ fun DetailScreen(
         },
         modifier = modifier
     ) { innerPadding ->
-        val coin = coinState
         if (coin == null) {
             Box(
                 modifier = Modifier
@@ -278,7 +301,7 @@ fun DetailScreen(
                             // Buy button with client-side validation check
                             Button(
                                 onClick = {
-                                    viewModel.performTrade(coin, isBuy = true, quantityInput) { res ->
+                                    onPerformTrade(coin, true, quantityInput) { res ->
                                         when (res) {
                                             is TradeResult.Success -> {
                                                 Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
@@ -304,7 +327,7 @@ fun DetailScreen(
                             // Sell button with client-side validation check
                             Button(
                                 onClick = {
-                                    viewModel.performTrade(coin, isBuy = false, quantityInput) { res ->
+                                    onPerformTrade(coin, false, quantityInput) { res ->
                                         when (res) {
                                             is TradeResult.Success -> {
                                                 Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
@@ -333,6 +356,35 @@ fun DetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DetailScreenPreview() {
+    MaterialTheme {
+        DetailScreenContent(
+            coin = CryptoCoin(
+                id = "bitcoin",
+                symbol = "BTC",
+                name = "Bitcoin",
+                nameId = "bitcoin",
+                rank = 1,
+                priceUsd = 95000.0,
+                percentChange24h = 3.5,
+                imageUrl = "",
+                volume24h = 45000000000.0,
+                quantityOwned = 0.05
+            ),
+            portfolioState = PortfolioUiState(
+                cashBalance = 15000.0,
+                totalPortfolioValue = 19750.0,
+                totalDeposited = 10000.0
+            ),
+            selectedCurrency = CurrencySetting.EUR,
+            onNavigateBack = {},
+            onPerformTrade = { _, _, _, _ -> }
+        )
     }
 }
 

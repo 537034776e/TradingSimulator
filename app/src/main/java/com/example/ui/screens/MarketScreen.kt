@@ -71,7 +71,8 @@ import com.example.ui.theme.RedCrypto
 import com.example.ui.viewmodel.CryptoViewModel
 import com.example.ui.viewmodel.MarketUiState
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.ui.tooling.preview.Preview
+
 @Composable
 fun MarketScreen(
     viewModel: CryptoViewModel,
@@ -83,6 +84,37 @@ fun MarketScreen(
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
     val selectedSortOption by viewModel.selectedSortOption.collectAsState()
 
+    MarketScreenContent(
+        searchVal = searchVal,
+        onSearchValChange = { viewModel.setSearchQuery(it) },
+        marketState = marketState,
+        selectedCurrency = selectedCurrency,
+        selectedSortOption = selectedSortOption,
+        onCurrencySelected = { viewModel.setSelectedCurrency(it) },
+        onSortOptionSelected = { viewModel.setSelectedSortOption(it) },
+        onRefresh = { viewModel.refreshMarket() },
+        onCoinClick = { coin ->
+            viewModel.selectCoinById(coin.id)
+            onNavigateToDetail(coin.id)
+        },
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MarketScreenContent(
+    searchVal: String,
+    onSearchValChange: (String) -> Unit,
+    marketState: MarketUiState,
+    selectedCurrency: CurrencySetting,
+    selectedSortOption: CoinSortOption,
+    onCurrencySelected: (CurrencySetting) -> Unit,
+    onSortOptionSelected: (CoinSortOption) -> Unit,
+    onRefresh: () -> Unit,
+    onCoinClick: (CryptoCoin) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -99,7 +131,7 @@ fun MarketScreen(
                         )
                         CurrencyDropdown(
                             selectedCurrency = selectedCurrency,
-                            onCurrencySelected = { viewModel.setSelectedCurrency(it) }
+                            onCurrencySelected = onCurrencySelected
                         )
                     }
                 },
@@ -132,7 +164,7 @@ fun MarketScreen(
                                         )
                                     },
                                     onClick = {
-                                        viewModel.setSelectedSortOption(option)
+                                        onSortOptionSelected(option)
                                         sortMenuExpanded = false
                                     },
                                     modifier = Modifier.testTag("sort_option_${option.name}")
@@ -158,14 +190,14 @@ fun MarketScreen(
             // Search Input box with M3 styling
             OutlinedTextField(
                 value = searchVal,
-                onValueChange = { viewModel.setSearchQuery(it) },
+                onValueChange = onSearchValChange,
                 placeholder = { Text("Cerca crypto o simbolo...") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = "Pulsante di ricerca")
                 },
                 trailingIcon = {
                     if (searchVal.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                        IconButton(onClick = { onSearchValChange("") }) {
                             Icon(imageVector = Icons.Default.Clear, contentDescription = "Cancella")
                         }
                     }
@@ -198,7 +230,7 @@ fun MarketScreen(
                 marketState.errorMessage != null && marketState.coins.isEmpty() -> {
                     ErrorStateView(
                         message = marketState.errorMessage ?: "Errore indefinito",
-                        onRetry = { viewModel.refreshMarket() }
+                        onRetry = onRefresh
                     )
                 }
                 marketState.coins.isEmpty() -> {
@@ -243,16 +275,68 @@ fun MarketScreen(
                             CoinRowItem(
                                 coin = coin,
                                 currencySetting = selectedCurrency,
-                                onClick = {
-                                    viewModel.selectCoinById(coin.id)
-                                    onNavigateToDetail(coin.id)
-                                }
+                                onClick = { onCoinClick(coin) }
                             )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MarketScreenPreview() {
+    MaterialTheme {
+        MarketScreenContent(
+            searchVal = "",
+            onSearchValChange = {},
+            marketState = MarketUiState(
+                isLoading = false,
+                coins = listOf(
+                    CryptoCoin(
+                        id = "bitcoin",
+                        symbol = "BTC",
+                        name = "Bitcoin",
+                        nameId = "bitcoin",
+                        rank = 1,
+                        priceUsd = 95000.0,
+                        percentChange24h = 1.2,
+                        imageUrl = "",
+                        volume24h = 45000000000.0
+                    ),
+                    CryptoCoin(
+                        id = "ethereum",
+                        symbol = "ETH",
+                        name = "Ethereum",
+                        nameId = "ethereum",
+                        rank = 2,
+                        priceUsd = 3400.0,
+                        percentChange24h = -0.5,
+                        imageUrl = "",
+                        volume24h = 20000000000.0
+                    ),
+                    CryptoCoin(
+                        id = "aave",
+                        symbol = "AAVE",
+                        name = "Aave",
+                        nameId = "aave",
+                        rank = 50,
+                        priceUsd = 140.0,
+                        percentChange24h = 3.4,
+                        imageUrl = "",
+                        volume24h = 250000000.0
+                    )
+                )
+            ),
+            selectedCurrency = CurrencySetting.EUR,
+            selectedSortOption = CoinSortOption.NAME_ASC,
+            onCurrencySelected = {},
+            onSortOptionSelected = {},
+            onRefresh = {},
+            onCoinClick = {}
+        )
     }
 }
 

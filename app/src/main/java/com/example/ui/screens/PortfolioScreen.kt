@@ -72,6 +72,11 @@ import com.example.ui.theme.GreenCrypto
 import com.example.ui.theme.RedCrypto
 import com.example.ui.viewmodel.CryptoViewModel
 import java.util.Date
+import com.example.data.model.CryptoCoin
+import com.example.ui.viewmodel.MarketUiState
+import com.example.ui.viewmodel.PortfolioUiState
+import com.example.ui.viewmodel.TradeResult
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PortfolioScreen(
@@ -104,6 +109,38 @@ fun PortfolioScreen(
         }
     }
 
+    PortfolioScreenContent(
+        portfolioState = portfolioState,
+        marketState = marketState,
+        selectedCurrency = selectedCurrency,
+        onCurrencySelected = { viewModel.setSelectedCurrency(it) },
+        onSimulateDeposit = { viewModel.simulateDeposit(it) },
+        onSetExactBalance = { viewModel.setExactBalance(it) },
+        onPerformConversion = { source, target, amount, coins, onResult ->
+            viewModel.performConversion(source, target, amount, coins, onResult)
+        },
+        onExportClick = {
+            exportLauncher.launch("portafoglio_crypto.csv")
+        },
+        onNavigateToCoin = onNavigateToCoin,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun PortfolioScreenContent(
+    portfolioState: PortfolioUiState,
+    marketState: MarketUiState,
+    selectedCurrency: CurrencySetting,
+    onCurrencySelected: (CurrencySetting) -> Unit,
+    onSimulateDeposit: (Double) -> Unit,
+    onSetExactBalance: (Double) -> Unit,
+    onPerformConversion: (String, String, String, List<CryptoCoin>, (TradeResult) -> Unit) -> Unit,
+    onExportClick: () -> Unit,
+    onNavigateToCoin: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("I Miei Asset", "Cronologia", "Converti")
 
@@ -147,14 +184,12 @@ fun PortfolioScreen(
                     ) {
                         CurrencyDropdown(
                             selectedCurrency = selectedCurrency,
-                            onCurrencySelected = { viewModel.setSelectedCurrency(it) }
+                            onCurrencySelected = onCurrencySelected
                         )
 
                         // CSV Export Button
                         IconButton(
-                            onClick = {
-                                exportLauncher.launch("portafoglio_crypto.csv")
-                            },
+                            onClick = onExportClick,
                             modifier = Modifier.testTag("export_portfolio_button")
                         ) {
                             Icon(
@@ -303,10 +338,10 @@ fun PortfolioScreen(
                 currencySetting = selectedCurrency
             )
             2 -> ConvertTab(
-                viewModel = viewModel,
                 portfolioState = portfolioState,
                 marketCoins = marketState.coins,
-                selectedCurrency = selectedCurrency
+                selectedCurrency = selectedCurrency,
+                onPerformConversion = onPerformConversion
             )
         }
 
@@ -385,7 +420,7 @@ fun PortfolioScreen(
                                     OutlinedButton(
                                         onClick = {
                                             val usdAmount = amount
-                                            viewModel.simulateDeposit(usdAmount)
+                                            onSimulateDeposit(usdAmount)
                                             showDepositDialog = false
                                             depositAmountInput = ""
                                             dialogError = null
@@ -448,9 +483,9 @@ fun PortfolioScreen(
                                     dialogError = "Il saldo non può essere negativo."
                                     return@Button
                                 }
-                                viewModel.setExactBalance(usdValue)
+                                onSetExactBalance(usdValue)
                             } else {
-                                viewModel.simulateDeposit(usdValue)
+                                onSimulateDeposit(usdValue)
                             }
                             showDepositDialog = false
                             depositAmountInput = ""
@@ -752,10 +787,10 @@ private fun buildCsvContent(
 
 @Composable
 fun ConvertTab(
-    viewModel: CryptoViewModel,
     portfolioState: com.example.ui.viewmodel.PortfolioUiState,
     marketCoins: List<com.example.data.model.CryptoCoin>,
-    selectedCurrency: CurrencySetting
+    selectedCurrency: CurrencySetting,
+    onPerformConversion: (String, String, String, List<com.example.data.model.CryptoCoin>, (com.example.ui.viewmodel.TradeResult) -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     var sourceAsset by remember { mutableStateOf("CASH") } // "CASH" or coin.symbol
@@ -1120,26 +1155,25 @@ fun ConvertTab(
                                 return@Button
                             }
 
-                            viewModel.performConversion(
-                                sourceSymbol = sourceAsset,
-                                targetSymbol = targetAsset,
-                                amountStr = amountInput,
-                                marketCoins = marketCoins,
-                                onResult = { res ->
-                                    when (res) {
-                                        is com.example.ui.viewmodel.TradeResult.Success -> {
-                                            isErrorResult = false
-                                            resultMessage = res.message
-                                            amountInput = ""
-                                            Toast.makeText(context, "Conversione completata!", Toast.LENGTH_SHORT).show()
-                                        }
-                                        is com.example.ui.viewmodel.TradeResult.Error -> {
-                                            isErrorResult = true
-                                            resultMessage = res.message
-                                        }
+                            onPerformConversion(
+                                sourceAsset,
+                                targetAsset,
+                                amountInput,
+                                marketCoins
+                            ) { res ->
+                                when (res) {
+                                    is com.example.ui.viewmodel.TradeResult.Success -> {
+                                        isErrorResult = false
+                                        resultMessage = res.message
+                                        amountInput = ""
+                                        Toast.makeText(context, "Conversione completata!", Toast.LENGTH_SHORT).show()
+                                    }
+                                    is com.example.ui.viewmodel.TradeResult.Error -> {
+                                        isErrorResult = true
+                                        resultMessage = res.message
                                     }
                                 }
-                            )
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
