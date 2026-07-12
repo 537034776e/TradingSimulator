@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class CryptoViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -235,7 +236,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = price,
                         newCashBalance = newCash
                     )
-                    val qtyFormatted = String.format("%.2f", quantity)
+                    val qtyFormatted = String.format(Locale.getDefault(), "%.2f", quantity)
                     onResult(TradeResult.Success("Acquisto completato: $qtyFormatted ${coin.symbol} per ${currency.format(totalCost)}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante l'acquisto: ${e.localizedMessage}"))
@@ -247,8 +248,8 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             val ownedQuantity = ownedHolding?.quantity ?: 0.0
 
             if (quantity > ownedQuantity) {
-                val ownedFormatted = String.format("%.2f", ownedQuantity)
-                val quantityFormatted = String.format("%.2f", quantity)
+                val ownedFormatted = String.format(Locale.getDefault(), "%.2f", ownedQuantity)
+                val quantityFormatted = String.format(Locale.getDefault(), "%.2f", quantity)
                 onResult(TradeResult.Error("Non possiedi abbastanza monete. Possedute: $ownedFormatted, Richieste: $quantityFormatted"))
                 return
             }
@@ -264,7 +265,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = price,
                         newCashBalance = newCash
                     )
-                    val qtyFormatted = String.format("%.2f", quantity)
+                    val qtyFormatted = String.format(Locale.getDefault(), "%.2f", quantity)
                     onResult(TradeResult.Success("Vendita completata: $qtyFormatted ${coin.symbol} per ${currency.format(totalCost)}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante la vendita: ${e.localizedMessage}"))
@@ -338,7 +339,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         pricePerUnit = targetCoin.priceUsd,
                         newCashBalance = newCash
                     )
-                    val qtyFormatted = String.format("%.4f", targetQuantity)
+                    val qtyFormatted = String.format(Locale.getDefault(), "%.4f", targetQuantity)
                     onResult(TradeResult.Success("Conversione completata: hai convertito ${currency.format(amountUsd)} in $qtyFormatted ${targetCoin.symbol}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante la conversione: ${e.localizedMessage}"))
@@ -349,7 +350,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             val sourceHolding = portfolioUiState.value.holdings.find { it.symbol.equals(sourceSymbol, ignoreCase = true) }
             if (sourceHolding == null || amount > sourceHolding.quantity) {
                 val owned = sourceHolding?.quantity ?: 0.0
-                onResult(TradeResult.Error("Quantità insufficiente di ${sourceSymbol}. Possiedi: ${String.format("%.4f", owned)}"))
+                onResult(TradeResult.Error("Quantità insufficiente di ${sourceSymbol}. Possiedi: ${String.format(Locale.getDefault(), "%.4f", owned)}"))
                 return
             }
 
@@ -370,7 +371,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         newCashBalance = newCash
                     )
                     val formattedFiatValue = currency.format(totalValueUsd)
-                    onResult(TradeResult.Success("Conversione completata: hai convertito ${String.format("%.4f", amount)} ${sourceSymbol} in $formattedFiatValue contanti"))
+                    onResult(TradeResult.Success("Conversione completata: hai convertito ${String.format(Locale.getDefault(), "%.4f", amount)} ${sourceSymbol} in $formattedFiatValue contanti"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante la conversione: ${e.localizedMessage}"))
                 }
@@ -380,7 +381,7 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
             val sourceHolding = portfolioUiState.value.holdings.find { it.symbol.equals(sourceSymbol, ignoreCase = true) }
             if (sourceHolding == null || amount > sourceHolding.quantity) {
                 val owned = sourceHolding?.quantity ?: 0.0
-                onResult(TradeResult.Error("Quantità insufficiente di ${sourceSymbol}. Possiedi: ${String.format("%.4f", owned)}"))
+                onResult(TradeResult.Error("Quantità insufficiente di ${sourceSymbol}. Possiedi: ${String.format(Locale.getDefault(), "%.4f", owned)}"))
                 return
             }
 
@@ -408,8 +409,8 @@ class CryptoViewModel(application: Application) : AndroidViewModel(application) 
                         targetQuantity = targetQuantity,
                         targetPriceUsd = targetCoin.priceUsd
                     )
-                    val srcQtyFormatted = String.format("%.4f", amount)
-                    val tgtQtyFormatted = String.format("%.4f", targetQuantity)
+                    val srcQtyFormatted = String.format(Locale.getDefault(), "%.4f", amount)
+                    val tgtQtyFormatted = String.format(Locale.getDefault(), "%.4f", targetQuantity)
                     onResult(TradeResult.Success("Conversione completata: $srcQtyFormatted ${sourceSymbol} convertiti in $tgtQtyFormatted ${targetSymbol}"))
                 } catch (e: Exception) {
                     onResult(TradeResult.Error("Errore durante la conversione: ${e.localizedMessage}"))

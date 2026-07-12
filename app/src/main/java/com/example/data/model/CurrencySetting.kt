@@ -1,5 +1,7 @@
 package com.example.data.model
 
+import java.util.Locale
+
 enum class CurrencySetting(
     val symbol: String,
     val code: String,
@@ -20,9 +22,9 @@ enum class CurrencySetting(
     fun format(valueInUsd: Double): String {
         val converted = valueInUsd * usdToCurrencyRate
         val formattedValue = if (this == JPY) {
-            String.format("%,.0f", converted)
+            String.format(Locale.getDefault(), "%,.0f", converted)
         } else {
-            String.format("%,.2f", converted)
+            String.format(Locale.getDefault(), "%,.2f", converted)
         }
         return if (isSymbolSuffix) {
             "$formattedValue $symbol"

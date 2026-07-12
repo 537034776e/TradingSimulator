@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
+import java.util.Locale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -115,7 +116,7 @@ fun DetailScreen(
                                     type = "text/plain"
                                     putExtra(
                                         Intent.EXTRA_TEXT,
-                                        "La criptovaluta ${coin.name} (${coin.symbol}) viene valutata a ${selectedCurrency.format(coin.priceUsd)} (Variazione 24h: ${if (coin.percentChange24h >= 0) "+" else ""}${String.format("%.2f", coin.percentChange24h)}%). Negozia in sicurezza con l'app Simulatore Crypto!"
+                                        "La criptovaluta ${coin.name} (${coin.symbol}) viene valutata a ${selectedCurrency.format(coin.priceUsd)} (Variazione 24h: ${if (coin.percentChange24h >= 0) "+" else ""}${String.format(Locale.getDefault(), "%.2f", coin.percentChange24h)}%). Negozia in sicurezza con l'app Simulatore Crypto!"
                                     )
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "Condividi questa quotazione"))
@@ -400,7 +401,7 @@ fun AssetHeaderSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
-                        text = "${if (isPositive) "+" else ""}${String.format("%.2f", coin.percentChange24h)}%",
+                        text = "${if (isPositive) "+" else ""}${String.format(Locale.getDefault(), "%.2f", coin.percentChange24h)}%",
                         style = MaterialTheme.typography.bodyMedium,
                         color = textColor,
                         fontWeight = FontWeight.Bold
@@ -608,7 +609,7 @@ fun PriceChartSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
                         ) {
                             val sign = if (percentChange >= 0) "+" else ""
                             Text(
-                                text = "$sign${String.format("%.2f", percentChange)}%",
+                                text = "$sign${String.format(Locale.getDefault(), "%.2f", percentChange)}%",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = chartColor
@@ -875,7 +876,7 @@ fun HoldingsSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${String.format("%.2f", coin.quantityOwned)} ${coin.symbol}",
+                            text = "${String.format(Locale.getDefault(), "%.2f", coin.quantityOwned)} ${coin.symbol}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -923,7 +924,7 @@ fun HoldingsSection(coin: CryptoCoin, currencySetting: CurrencySetting) {
                         val profitColor = if (profit >= 0) GreenCrypto else RedCrypto
                         val sign = if (profit >= 0) "+" else ""
                         Text(
-                            text = if (profit >= 0) "+${currencySetting.format(profit)} ($sign${String.format("%.2f", coin.profitLossPercent)}%)" else "${currencySetting.format(profit)} ($sign${String.format("%.2f", coin.profitLossPercent)}%)",
+                            text = if (profit >= 0) "+${currencySetting.format(profit)} ($sign${String.format(Locale.getDefault(), "%.2f", coin.profitLossPercent)}%)" else "${currencySetting.format(profit)} ($sign${String.format(Locale.getDefault(), "%.2f", coin.profitLossPercent)}%)",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = profitColor

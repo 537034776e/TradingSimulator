@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
+import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.text.format.DateFormat
@@ -348,9 +349,9 @@ fun PortfolioScreen(
                                 listOf(100.0, 1000.0, 5000.0).forEach { amount ->
                                     val amountInSelected = amount * selectedCurrency.usdToCurrencyRate
                                     val formattedShortcut = if (selectedCurrency.isSymbolSuffix) {
-                                        "${String.format("%.0f", amountInSelected)} ${selectedCurrency.symbol}"
+                                        "${String.format(Locale.getDefault(), "%.0f", amountInSelected)} ${selectedCurrency.symbol}"
                                     } else {
-                                        "${selectedCurrency.symbol}${String.format("%.0f", amountInSelected)}"
+                                        "${selectedCurrency.symbol}${String.format(Locale.getDefault(), "%.0f", amountInSelected)}"
                                     }
                                     OutlinedButton(
                                         onClick = {
@@ -524,7 +525,7 @@ fun MyAssetsTab(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "${String.format("%.2f", holding.quantity)} ${holding.symbol}",
+                                    text = "${String.format(Locale.getDefault(), "%.2f", holding.quantity)} ${holding.symbol}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -539,7 +540,7 @@ fun MyAssetsTab(
 
                                 val isProfit = returnVal >= 0
                                 Text(
-                                    text = "${if (isProfit) "+" else ""}${String.format("%.2f", returnPercent)}%",
+                                    text = "${if (isProfit) "+" else ""}${String.format(Locale.getDefault(), "%.2f", returnPercent)}%",
                                     style = MaterialTheme.typography.labelMedium,
                                     color = if (isProfit) GreenCrypto else RedCrypto,
                                     fontWeight = FontWeight.Bold
@@ -660,7 +661,7 @@ fun TransactionsTab(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "${String.format("%.2f", tx.quantity)} ${tx.symbol}",
+                                text = "${String.format(Locale.getDefault(), "%.2f", tx.quantity)} ${tx.symbol}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -712,11 +713,11 @@ private fun buildCsvContent(
         val returnPercent = if (purchaseValue > 0) (returnVal / purchaseValue) * 100.0 else 0.0
         
         val nameEscaped = holding.name.replace("\"", "\"\"")
-        val qtyStr = String.format("%.2f", holding.quantity)
+        val qtyStr = String.format(Locale.getDefault(), "%.2f", holding.quantity)
         val avgPriceStr = currencySetting.format(holding.averagePurchasePrice).replace("\"", "\"\"")
         val currentPriceStr = currencySetting.format(currentPrice).replace("\"", "\"\"")
         val totalValStr = currencySetting.format(totalValue).replace("\"", "\"\"")
-        val returnPercentStr = "${if (returnVal >= 0) "+" else ""}${String.format("%.2f", returnPercent)}%"
+        val returnPercentStr = "${if (returnVal >= 0) "+" else ""}${String.format(Locale.getDefault(), "%.2f", returnPercent)}%"
         
         csvBuilder.append("\"$nameEscaped\";${holding.symbol};$qtyStr;\"$avgPriceStr\";\"$currentPriceStr\";\"$totalValStr\";$returnPercentStr\n")
     }
@@ -892,7 +893,7 @@ fun ConvertTab(
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
                                                 Text("${holding.name} (${holding.symbol})")
-                                                Text("${String.format("%.4f", holding.quantity)} ${holding.symbol}")
+                                                Text("${String.format(Locale.getDefault(), "%.4f", holding.quantity)} ${holding.symbol}")
                                             }
                                         },
                                         onClick = {
@@ -997,7 +998,7 @@ fun ConvertTab(
                     val balanceHelperText = if (sourceAsset == "CASH") {
                         "Saldo disponibile: ${selectedCurrency.format(portfolioState.cashBalance)}"
                     } else {
-                        "Disponibili: ${String.format("%.6f", maxAvailable)} $sourceAsset"
+                        "Disponibili: ${String.format(Locale.getDefault(), "%.6f", maxAvailable)} $sourceAsset"
                     }
 
                     Text(
@@ -1031,9 +1032,9 @@ fun ConvertTab(
                         Button(
                             onClick = {
                                 amountInput = if (sourceAsset == "CASH") {
-                                    String.format("%.2f", maxAvailable).replace(',', '.')
+                                    String.format(Locale.getDefault(), "%.2f", maxAvailable).replace(',', '.')
                                 } else {
-                                    String.format("%.6f", maxAvailable).replace(',', '.')
+                                    String.format(Locale.getDefault(), "%.6f", maxAvailable).replace(',', '.')
                                 }
                                 resultMessage = null
                             },
@@ -1049,7 +1050,7 @@ fun ConvertTab(
                         val previewText = if (targetAsset == "CASH") {
                             "Riceverai circa: ${selectedCurrency.format(estimatedOutput)}"
                         } else {
-                            "Riceverai circa: ${String.format("%.6f", estimatedOutput)} $targetAsset"
+                            "Riceverai circa: ${String.format(Locale.getDefault(), "%.6f", estimatedOutput)} $targetAsset"
                         }
 
                         Card(

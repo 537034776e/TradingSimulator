@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import java.util.Locale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -357,7 +358,7 @@ fun CoinRowItem(
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
-                        text = "${if (isPositive) "+" else ""}${String.format("%.2f", coin.percentChange24h)}%",
+                        text = "${if (isPositive) "+" else ""}${String.format(Locale.getDefault(), "%.2f", coin.percentChange24h)}%",
                         style = MaterialTheme.typography.labelMedium,
                         color = textColor,
                         fontWeight = FontWeight.SemiBold
@@ -371,7 +372,7 @@ fun CoinRowItem(
                         shape = RoundedCornerShape(100.dp)
                     ) {
                         Text(
-                            text = "Possiedi: ${String.format("%.2f", coin.quantityOwned)}",
+                            text = "Possiedi: ${String.format(Locale.getDefault(), "%.2f", coin.quantityOwned)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold,
@@ -541,11 +542,11 @@ fun formatVolume(valueInUsd: Double, currency: CurrencySetting): String {
     val converted = valueInUsd * currency.usdToCurrencyRate
     return when {
         converted >= 1_000_000_000 -> {
-            val valStr = String.format("%.2f", converted / 1_000_000_000)
+            val valStr = String.format(Locale.getDefault(), "%.2f", converted / 1_000_000_000)
             if (currency.isSymbolSuffix) "$valStr Mld ${currency.symbol}" else "${currency.symbol}$valStr Mld"
         }
         converted >= 1_000_000 -> {
-            val valStr = String.format("%.2f", converted / 1_000_000)
+            val valStr = String.format(Locale.getDefault(), "%.2f", converted / 1_000_000)
             if (currency.isSymbolSuffix) "$valStr Mn ${currency.symbol}" else "${currency.symbol}$valStr Mn"
         }
         else -> {
