@@ -71,6 +71,7 @@ import com.example.ui.theme.RedCrypto
 import com.example.ui.viewmodel.CryptoViewModel
 import com.example.ui.viewmodel.MarketUiState
 
+import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -288,7 +289,7 @@ fun MarketScreenContent(
 @Preview(showBackground = true)
 @Composable
 fun MarketScreenPreview() {
-    MaterialTheme {
+    MyApplicationTheme {
         MarketScreenContent(
             searchVal = "",
             onSearchValChange = {},

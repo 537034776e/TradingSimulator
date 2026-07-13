@@ -76,6 +76,7 @@ import com.example.data.model.CryptoCoin
 import com.example.ui.viewmodel.MarketUiState
 import com.example.ui.viewmodel.PortfolioUiState
 import com.example.ui.viewmodel.TradeResult
+import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -510,6 +511,39 @@ fun PortfolioScreenContent(
                 }
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PortfolioScreenPreview() {
+    MyApplicationTheme {
+        PortfolioScreenContent(
+            portfolioState = PortfolioUiState(
+                cashBalance = 10000.0,
+                holdings = listOf(
+                    CryptoHoldingEntity("BTC", "Bitcoin", 0.5, 90000.0),
+                    CryptoHoldingEntity("ETH", "Ethereum", 2.0, 3000.0)
+                ),
+                totalPortfolioValue = 65000.0,
+                transactions = emptyList(),
+                totalDeposited = 50000.0
+            ),
+            marketState = MarketUiState(
+                isLoading = false,
+                coins = listOf(
+                    CryptoCoin("bitcoin", "BTC", "Bitcoin", "bitcoin", 1, 95000.0, 5.0, ""),
+                    CryptoCoin("ethereum", "ETH", "Ethereum", "ethereum", 2, 3500.0, 2.0, "")
+                )
+            ),
+            selectedCurrency = CurrencySetting.EUR,
+            onCurrencySelected = {},
+            onSimulateDeposit = {},
+            onSetExactBalance = {},
+            onPerformConversion = { _, _, _, _, _ -> },
+            onExportClick = {},
+            onNavigateToCoin = {}
+        )
     }
 }
 

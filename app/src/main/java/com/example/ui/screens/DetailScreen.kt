@@ -79,6 +79,7 @@ import com.example.ui.viewmodel.CryptoViewModel
 import com.example.ui.viewmodel.TradeResult
 
 import com.example.ui.viewmodel.PortfolioUiState
+import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -362,7 +363,7 @@ fun DetailScreenContent(
 @Preview(showBackground = true)
 @Composable
 fun DetailScreenPreview() {
-    MaterialTheme {
+    MyApplicationTheme {
         DetailScreenContent(
             coin = CryptoCoin(
                 id = "bitcoin",
